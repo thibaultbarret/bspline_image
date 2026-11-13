@@ -1,0 +1,4 @@
+build*/
+.venv-tools/
+_install/
+.DS_Store
