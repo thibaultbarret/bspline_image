@@ -5,4 +5,5 @@
 /// @brief Umbrella header: includes the whole public API.
 
 #include "bsi/config.hpp"
+#include "bsi/kernel/basis.hpp"
 #include "bsi/types.hpp"
