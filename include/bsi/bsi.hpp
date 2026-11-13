@@ -6,6 +6,7 @@
 
 #include "bsi/config.hpp"
 #include "bsi/kernel/basis.hpp"
+#include "bsi/kernel/evaluate.hpp"
 #include "bsi/kernel/mirror.hpp"
 #include "bsi/kernel/poles.hpp"
 #include "bsi/kernel/prefilter.hpp"
