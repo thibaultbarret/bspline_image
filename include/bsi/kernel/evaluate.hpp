@@ -12,7 +12,6 @@
 
 #include <cmath>
 #include <cstddef>
-#include <limits>
 #include <type_traits>
 
 #include "bsi/config.hpp"
@@ -31,6 +30,14 @@ template <int Degree>
 inline constexpr std::ptrdiff_t required_pad = Degree / 2 + 1;
 
 namespace detail {
+
+/// @brief A quiet NaN of type `T`, built from the `NAN` macro of `<cmath>` only.
+/// @tparam T Floating-point scalar type.
+/// @return A NaN value.
+template <class T>
+BSI_HOST_DEVICE inline T make_nan() noexcept {
+    return static_cast<T>(NAN);
+}
 
 /// @brief Row sum \f$\sum_k a_k\, c(i_0 + k, j)\f$ over the x window.
 /// @tparam T      Floating-point scalar type.
@@ -69,7 +76,7 @@ template <class T, int Degree>
 BSI_HOST_DEVICE inline T evaluate(CoeffView<const T> c, T x, T y) noexcept {
     static_assert(std::is_floating_point_v<T>, "evaluate: T must be floating point");
     if (!std::isfinite(x) || !std::isfinite(y)) {
-        return std::numeric_limits<T>::quiet_NaN();
+        return detail::make_nan<T>();
     }
     const Folded<T> fx = fold_mirror(x, c.width);
     const Folded<T> fy = fold_mirror(y, c.height);
@@ -111,7 +118,7 @@ BSI_HOST_DEVICE inline ValueAndGradient<T> evaluate_with_gradient(CoeffView<cons
     static_assert(std::is_floating_point_v<T>,
                   "evaluate_with_gradient: T must be floating point");
     if (!std::isfinite(x) || !std::isfinite(y)) {
-        const T nan = std::numeric_limits<T>::quiet_NaN();
+        const T nan = detail::make_nan<T>();
         return ValueAndGradient<T>{nan, nan, nan};
     }
     const Folded<T> fx = fold_mirror(x, c.width);
