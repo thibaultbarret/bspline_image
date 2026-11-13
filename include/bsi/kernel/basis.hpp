@@ -242,13 +242,13 @@ BSI_HOST_DEVICE inline T fractional_position(T x) noexcept {
 /// @brief Interpolation weights \f$w_k = \beta^n(x - (i_0 + k))\f$, \f$k = 0..n\f$.
 ///
 /// Computed together from the fractional part of \f$x\f$ with the uniform-grid Cox-de Boor
-/// recurrence (no per-weight call to #bspline). The weights are non-negative and sum to 1.
+/// recurrence (no per-weight call to `bspline`). The weights are non-negative and sum to 1.
 ///
 /// @tparam T      Floating-point scalar type.
 /// @tparam Degree Spline degree \f$n\f$.
 /// @param x Evaluation point (finite).
 /// @param[out] w Output array of at least `Degree + 1` values.
-/// @return \f$i_0\f$ = first_index<T, Degree>(x).
+/// @return \f$i_0\f$ = `first_index<T, Degree>(x)`.
 template <class T, int Degree>
 BSI_HOST_DEVICE inline std::ptrdiff_t weights(T x, T* w) noexcept {
     static_assert(detail::valid_basis_params<T, Degree>,
@@ -275,7 +275,7 @@ BSI_HOST_DEVICE inline std::ptrdiff_t weights(T x, T* w) noexcept {
 /// @param x Evaluation point (finite).
 /// @param[out] w  Output weights, at least `Degree + 1` values.
 /// @param[out] dw Output weight derivatives, at least `Degree + 1` values.
-/// @return \f$i_0\f$ = first_index<T, Degree>(x).
+/// @return \f$i_0\f$ = `first_index<T, Degree>(x)`.
 template <class T, int Degree>
 BSI_HOST_DEVICE inline std::ptrdiff_t weights_and_derivatives(T x, T* w, T* dw) noexcept {
     static_assert(detail::valid_basis_params<T, Degree>,
