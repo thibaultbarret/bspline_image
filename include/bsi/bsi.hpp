@@ -4,6 +4,7 @@
 /// @file
 /// @brief Umbrella header: includes the whole public API.
 
+#include "bsi/bspline_image.hpp"
 #include "bsi/config.hpp"
 #include "bsi/kernel/basis.hpp"
 #include "bsi/kernel/evaluate.hpp"
