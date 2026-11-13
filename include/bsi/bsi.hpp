@@ -6,4 +6,5 @@
 
 #include "bsi/config.hpp"
 #include "bsi/kernel/basis.hpp"
+#include "bsi/kernel/mirror.hpp"
 #include "bsi/types.hpp"
