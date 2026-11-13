@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Configured by CMake (configure_file, @ONLY): see the `docs` target in CMakeLists.txt.
+
+PROJECT_NAME           = bspline_image
+PROJECT_NUMBER         = @PROJECT_VERSION@
+PROJECT_BRIEF          = "Header-only C++20 B-spline image interpolation"
+OUTPUT_DIRECTORY       = @CMAKE_BINARY_DIR@/docs
+
+INPUT                  = @PROJECT_SOURCE_DIR@/include/bsi @PROJECT_SOURCE_DIR@/docs/guide
+USE_MDFILE_AS_MAINPAGE = @PROJECT_SOURCE_DIR@/docs/guide/index.md
+FILE_PATTERNS          = *.hpp *.md
+RECURSIVE              = YES
+STRIP_FROM_PATH        = @PROJECT_SOURCE_DIR@/include
+STRIP_FROM_INC_PATH    = @PROJECT_SOURCE_DIR@/include
+EXCLUDE_SYMBOLS        = bsi::detail*
+PREDEFINED             = BSI_HOST_DEVICE=
+
+EXTRACT_ALL            = NO
+MARKDOWN_SUPPORT       = YES
+JAVADOC_AUTOBRIEF      = NO
+
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+USE_MATHJAX            = YES
+MATHJAX_VERSION        = MathJax_3
+
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+WARN_AS_ERROR          = FAIL_ON_WARNINGS

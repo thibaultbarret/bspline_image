@@ -63,3 +63,13 @@ endif()
 if(BSI_BUILD_BENCH)
   add_subdirectory(bench)
 endif()
+
+if(BSI_BUILD_DOCS)
+  find_package(Doxygen REQUIRED)
+  configure_file(docs/Doxyfile.in ${CMAKE_BINARY_DIR}/docs/Doxyfile @ONLY)
+  add_custom_target(docs
+    COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_BINARY_DIR}/docs/Doxyfile
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/docs
+    COMMENT "Generating API documentation with Doxygen"
+    VERBATIM)
+endif()
