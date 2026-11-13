@@ -147,21 +147,57 @@ TYPED_TEST(BSplineImageT, BatchEqualsPointwise) {
 TYPED_TEST(BSplineImageT, CopyAndMoveKeepResults) {
     constexpr int D = TestFixture::degree;
     const auto img = make_image<double>(kW, kH, kW);
-    bsi::BSplineImage<double, D> original(view_of(img, kW, kH, kW));
-    const double ref = original.value(5.4, 7.7);
-    const auto ref_g = original.gradient(5.4, 7.7);
+    using Image = bsi::BSplineImage<double, D>;
+    const auto other_img = make_image<double>(3, 2, 3);
 
-    const bsi::BSplineImage<double, D> copy(original);
-    bsi::BSplineImage<double, D> assigned(view_of(img, 1, 1, kW));
-    assigned = original;
-    const bsi::BSplineImage<double, D> moved(std::move(original));
-    const bsi::BSplineImage<double, D>* const all[] = {&copy, &assigned, &moved};
-    for (const auto* p : all) {
-        EXPECT_TRUE(bit_equal(p->value(5.4, 7.7), ref));
-        const auto g = p->gradient(5.4, 7.7);
+    // Reference values come from an independently built object that is never copied or moved.
+    const Image reference(view_of(img, kW, kH, kW));
+    const double ref = reference.value(5.4, 7.7);
+    const auto ref_g = reference.gradient(5.4, 7.7);
+    const auto expect_same = [&](const Image& p) {
+        EXPECT_TRUE(bit_equal(p.value(5.4, 7.7), ref));
+        const auto g = p.gradient(5.4, 7.7);
         EXPECT_TRUE(bit_equal(g.dx, ref_g.dx));
         EXPECT_TRUE(bit_equal(g.dy, ref_g.dy));
+    };
+    const auto make_source = [&] { return Image(view_of(img, kW, kH, kW)); };
+
+    // Copies must stay valid after their source is destroyed.
+    std::vector<Image> keep;
+    keep.reserve(4);
+    {
+        const Image source = make_source();
+        Image copy_ctor(source);
+        Image copy_assigned(view_of(other_img, 3, 2, 3));
+        copy_assigned = source;
+        keep.push_back(std::move(copy_ctor));
+        keep.push_back(std::move(copy_assigned));
     }
+    // Moves must stay valid after their source is destroyed or overwritten.
+    {
+        Image source = make_source();
+        Image move_ctor(std::move(source));
+        source = Image(view_of(other_img, 3, 2, 3));  // overwrite the moved-from object
+        keep.push_back(std::move(move_ctor));
+        Image source2 = make_source();
+        Image move_assigned(view_of(other_img, 3, 2, 3));
+        move_assigned = std::move(source2);
+        source2 = Image(view_of(other_img, 3, 2, 3));
+        keep.push_back(std::move(move_assigned));
+    }
+    // Copy from a moved-to object, then destroy the moved-to object.
+    Image from_moved(view_of(other_img, 3, 2, 3));
+    {
+        Image moved_to = std::move(keep.back());
+        keep.pop_back();
+        from_moved = moved_to;
+        const Image copied(moved_to);
+        expect_same(copied);
+    }
+    for (const Image& p : keep) {
+        expect_same(p);
+    }
+    expect_same(from_moved);
 }
 
 TYPED_TEST(BSplineImageT, StridedUint16EqualsContiguousDouble) {
