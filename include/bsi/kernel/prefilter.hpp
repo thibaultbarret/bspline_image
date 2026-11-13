@@ -5,10 +5,13 @@
 /// @brief Recursive 1D B-spline prefilter (samples to coefficients) with mirror boundaries.
 ///
 /// Implements the Unser / Thevenaz-Blu-Unser algorithm. The transfer function of the
-/// prefilter (inverse of the sampled basis) is
-/// \f$H(z) = \lambda \prod_i \frac{1}{(1 - z_i z^{-1})(1 - z_i z)}\f$ with the poles
-/// \f$z_i\f$ of `bsi::pole`, and gain
-/// \f$\lambda = \prod_i (1 - z_i)(1 - 1/z_i)\f$. Each pole is applied as a causal
+/// prefilter, \f$H(z) = 1/B^n(z)\f$ with \f$B^n(z) = \sum_k \beta^n(k) z^{-k}\f$, is
+/// \f$H(z) = \lambda \prod_i \frac{-z_i}{(1 - z_i z^{-1})(1 - z_i z)}\f$, with the poles
+/// \f$z_i\f$ of `bsi::pole` and gain
+/// \f$\lambda = \prod_i (1 - z_i)(1 - 1/z_i)\f$. The factor \f$-z_i\f$ comes from the
+/// anti-causal recursion \f$c^-_k = z_i (c^-_{k+1} - c^+_k)\f$, whose transfer function is
+/// \f$-z_i/(1 - z_i z)\f$. The DC gain is \f$H(1) = 1\f$, since each pole contributes
+/// \f$(1-z_i)(1-1/z_i)(-z_i)/(1-z_i)^2 = 1\f$: constants are preserved. Each pole is applied as a causal
 /// first-order recursion followed by an anti-causal one. Boundaries are whole-sample
 /// symmetric without repeating the edge sample (period \f$2N-2\f$, see
 /// `bsi::mirror_index`). Computation is always done in `double`.

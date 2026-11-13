@@ -4,11 +4,12 @@
 /// @file
 /// @brief Poles of the B-spline interpolation filter.
 ///
-/// The direct B-spline transform that maps samples to coefficients is the inverse of the
+/// The direct B-spline transform that maps samples to coefficients is the convolution inverse of the
 /// sampled basis \f$b^n[k] = \beta^n(k)\f$, whose \f$z\f$-transform is
 /// \f$B^n(z) = \sum_k \beta^n(k) z^{-k}\f$. For \f$n \ge 2\f$ it factors as
 /// \f$B^n(z) = \beta^n(0) \prod_{i=0}^{\lfloor n/2 \rfloor - 1}
-/// (1 - z_i z^{-1})(1 - z_i z)/(-z_i)\f$ with real poles \f$-1 < z_i < 0\f$
+/// (1 - z_i z^{-1})(1 - z_i z)/(-z_i)\f$ with real roots \f$-1 < z_i < 0\f$ (and \f$1/z_i\f$); these become the poles of the
+/// inverse filter \f$1/B^n(z)\f$
 /// (Unser, Aldroubi, Eden; Thevenaz, Blu, Unser 2000).
 
 #include "bsi/config.hpp"
