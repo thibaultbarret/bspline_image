@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
+import gc
+
 import numpy as np
+import pytest
 
 import bspline_image as bsi
 
@@ -27,3 +30,75 @@ def test_interpolates_pixels_degree3():
     for j in range(17):
         for i in range(23):
             assert abs(s.value(i, j) - img[j, i]) < 1e-9
+
+
+@pytest.mark.parametrize("pix", [np.uint8, np.uint16, np.float32, np.float64])
+def test_pixel_dtypes(pix):
+    img = np.clip(smooth(17, 23), 0, 255).astype(pix)
+    s = bsi.BSplineImage(img, degree=3)
+    for j in range(17):
+        for i in range(23):
+            assert abs(s.value(i, j) - float(img[j, i])) < 1e-9
+
+
+def test_row_strided_view_no_copy_needed():
+    big = smooth(40, 30)
+    v = big[::2, 1:]
+    got = bsi.BSplineImage(v)
+    ref = bsi.BSplineImage(np.ascontiguousarray(v))
+    for x, y in [(0.3, 0.7), (5.5, 4.25), (20.1, 10.9)]:
+        assert got.value(x, y) == ref.value(x, y)
+
+
+def test_column_strided_and_fortran_views():
+    img = smooth(17, 23)
+    big = smooth(17, 46)
+    for view, base in [(big[:, ::2], big[:, ::2]), (np.asfortranarray(img), img)]:
+        got = bsi.BSplineImage(view)
+        ref = bsi.BSplineImage(np.ascontiguousarray(base))
+        for x, y in [(0.3, 0.7), (5.5, 4.25), (20.1, 10.9)]:
+            assert got.value(x, y) == ref.value(x, y)
+
+
+@pytest.mark.parametrize("bad", [np.int32, np.bool_, ">f8"])
+def test_other_dtypes_converted(bad):
+    img = np.clip(smooth(17, 23), 0, 1).astype(bad) if bad is np.bool_ else smooth(17, 23).astype(bad)
+    got = bsi.BSplineImage(img)
+    ref = bsi.BSplineImage(img.astype(np.float64))
+    for x, y in [(0.3, 0.7), (5.5, 4.25), (20.1, 10.9)]:
+        assert abs(got.value(x, y) - ref.value(x, y)) < 1e-12
+
+
+def test_image_lifetime():
+    img = smooth(17, 23)
+    s = bsi.BSplineImage(img)
+    before = s.value(3.5, 2.25)
+    del img
+    gc.collect()
+    assert s.value(3.5, 2.25) == before
+
+
+def test_float32_spline():
+    img = smooth(17, 23)
+    s = bsi.BSplineImage(img, degree=3, dtype=np.float32)
+    assert s.dtype == np.dtype(np.float32)
+    for j in range(17):
+        for i in range(23):
+            assert abs(s.value(i, j) - img[j, i]) < 2e-3
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        dict(img=np.zeros((2, 3, 4))),
+        dict(img=np.zeros((0, 5))),
+        dict(degree=-1),
+        dict(degree=8),
+        dict(dtype=np.int16),
+    ],
+)
+def test_invalid_arguments(args):
+    kwargs = dict(img=smooth(8, 8))
+    kwargs.update(args)
+    with pytest.raises(ValueError):
+        bsi.BSplineImage(**kwargs)

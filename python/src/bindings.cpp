@@ -49,7 +49,21 @@ void bind_spline(nb::module_& m, const char* name) {
     cls.def_prop_ro("degree", &Spline::degree)
         .def_prop_ro("width", [](const Spline& s) { return s.width(); })
         .def_prop_ro("height", [](const Spline& s) { return s.height(); })
-        .def("value", &Spline::value, nb::arg("x"), nb::arg("y"));
+        .def("value", &Spline::value, nb::arg("x"), nb::arg("y"))
+        .def(
+            "gradient",
+            [](const Spline& s, T x, T y) {
+                const auto g = s.gradient(x, y);
+                return nb::make_tuple(g.dx, g.dy);
+            },
+            nb::arg("x"), nb::arg("y"))
+        .def(
+            "value_and_gradient",
+            [](const Spline& s, T x, T y) {
+                const auto r = s.value_and_gradient(x, y);
+                return nb::make_tuple(r.value, r.dx, r.dy);
+            },
+            nb::arg("x"), nb::arg("y"));
 }
 
 }  // namespace
