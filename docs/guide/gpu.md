@@ -13,6 +13,9 @@ nothing otherwise.
   from a `bsi::CoeffView<const T>` and a position.
 - `bsi::weights` and `bsi::weights_and_derivatives`: the 1-D weights (and derivatives) and
   the index of the first coefficient, if you write your own evaluation loop.
+- `bsi::weights_and_second_derivatives`: the 1-D weights with their first and second
+  derivatives, for a custom Hessian loop.
+- `bsi::evaluate_with_hessian`: full 2-D value, gradient and Hessian (`dxx`, `dxy`, `dyy`).
 - `bsi::fold_mirror` and `bsi::mirror_index`: mirror folding of real and integer
   coordinates.
 

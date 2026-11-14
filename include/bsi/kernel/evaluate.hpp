@@ -177,9 +177,10 @@ BSI_HOST_DEVICE inline ValueAndGradient<T> evaluate_with_gradient(CoeffView<cons
 /// orientations (second derivatives along one axis are even under the mirror fold). The
 /// returned `value`, `dx` and `dy` are bit-identical to `evaluate_with_gradient`.
 ///
-/// For degrees 0 to 2 the Hessian is exact for the piecewise representation: 0 for degrees 0
-/// and 1, piecewise constant for degree 2 (right derivative at the knots). Degrees >= 3 give
-/// a continuous Hessian.
+/// For degrees 0 to 2 the Hessian is exact for the piecewise representation: 0 for degree 0;
+/// for degree 1 (bilinear) \f$\partial_{xx} = \partial_{yy} = 0\f$ and \f$\partial_{xy}\f$ is
+/// piecewise constant and generally non-zero; piecewise constant for degree 2 (right
+/// derivative at the knots, in folded coordinates). Degrees >= 3 give a continuous Hessian.
 ///
 /// Non-finite coordinates give NaN for all six outputs.
 ///

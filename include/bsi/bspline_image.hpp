@@ -106,9 +106,9 @@ public:
 
     /// @brief Interpolated second derivatives at (x, y).
     ///
-    /// Degrees 0 to 2 give exact values (zero, or piecewise constant) but are not useful
-    /// for second derivatives; degree 3 or more is recommended, and 5 for a full Newton
-    /// iteration.
+    /// Degrees 0 to 2 give exact values for the piecewise representation (degree 0: zero;
+    /// degree 1: dxx = dyy = 0 with a piecewise constant dxy; degree 2: piecewise constant) but
+    /// are of limited use; degree 3 or more is recommended, and 5 for a full Newton iteration.
     /// @param x Column coordinate.
     /// @param y Row coordinate.
     /// @return Second derivatives (dxx, dxy, dyy); NaN if a coordinate is not finite.

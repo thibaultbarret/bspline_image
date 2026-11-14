@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""B-spline image interpolation for sub-pixel grey-level values and gradients."""
+"""B-spline image interpolation for sub-pixel grey-level values, gradients and Hessians."""
 
 import operator
 from typing import Tuple
@@ -124,7 +124,11 @@ class BSplineImage:
         self, x: float, y: float
     ) -> Tuple[float, float, float, float, float, float]:
         """Return ``(value, dx, dy, dxx, dxy, dyy)`` at (x = column, y = row),
-        bit-identical to ``value_and_gradient`` and ``hessian``."""
+        bit-identical to ``value_and_gradient`` and ``hessian``.
+
+        Degree 3 or more is recommended (5 for Newton-type refinement); degree 1
+        has ``dxx = dyy = 0`` and a piecewise constant ``dxy``.
+        """
         return self._impl.value_gradient_hessian(x, y)
 
     def _coords(
@@ -189,6 +193,8 @@ class BSplineImage:
 
         ``xs`` and ``ys`` must have identical shapes (no broadcasting); the
         outputs have that shape, and 0-d inputs give 0-d arrays.
+        Degree 3 or more is recommended (5 for Newton-type refinement); degree 1
+        has ``dxx = dyy = 0`` and a piecewise constant ``dxy``.
         """
         fx, fy, shape = self._coords(xs, ys)
         dxx = np.empty(fx.shape, dtype=self._dtype)
@@ -204,8 +210,19 @@ class BSplineImage:
 
         ``xs`` and ``ys`` must have identical shapes (no broadcasting); the
         outputs have that shape, and 0-d inputs give 0-d arrays.
+        Degree 3 or more is recommended (5 for Newton-type refinement); degree 1
+        has ``dxx = dyy = 0`` and a piecewise constant ``dxy``.
         """
         fx, fy, shape = self._coords(xs, ys)
-        outs = tuple(np.empty(fx.shape, dtype=self._dtype) for _ in range(6))
-        self._impl.values_gradients_hessians(fx, fy, *outs)
-        return tuple(o.reshape(shape) for o in outs)  # type: ignore[return-value]
+        v, dx, dy, dxx, dxy, dyy = (
+            np.empty(fx.shape, dtype=self._dtype) for _ in range(6)
+        )
+        self._impl.values_gradients_hessians(fx, fy, v, dx, dy, dxx, dxy, dyy)
+        return (
+            v.reshape(shape),
+            dx.reshape(shape),
+            dy.reshape(shape),
+            dxx.reshape(shape),
+            dxy.reshape(shape),
+            dyy.reshape(shape),
+        )

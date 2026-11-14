@@ -306,7 +306,7 @@ BSI_HOST_DEVICE inline std::ptrdiff_t weights_and_derivatives(T x, T* w, T* dw) 
 /// \f$\beta^{n\prime\prime}(u) = \beta^{n-2}(u+1) - 2\beta^{n-2}(u) + \beta^{n-2}(u-1)\f$ for
 /// \f$n \ge 2\f$. For \f$n \le 1\f$ the second derivative is taken as 0 (it is a sum of
 /// Dirac masses at the knots for \f$n = 1\f$). For \f$n = 2\f$ it is piecewise constant and
-/// the value at a knot is the right one. The second derivatives sum to 0.
+/// the value at a knot is the right one (in folded coordinates). The second derivatives sum to 0.
 ///
 /// @tparam T      Floating-point scalar type.
 /// @tparam Degree Spline degree \f$n\f$.

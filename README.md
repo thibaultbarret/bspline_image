@@ -50,14 +50,15 @@ int main() {
     const bsi::BSplineImage<double, 3> spline(view);          // cubic, prefiltered once
     const auto vg = spline.value_and_gradient(10.25, 20.75);  // sub-pixel position
     // vg.value, vg.dx, vg.dy
-    auto h = spline.value_gradient_hessian(10.25, 20.75);     // adds second derivatives
+    const auto h = spline.value_gradient_hessian(10.25, 20.75);     // adds second derivatives
     // h.value, h.dx, h.dy, h.dxx, h.dxy, h.dyy
 }
 ```
 
 Pixel (i, j) sits at coordinate (x = i, y = j). Second derivatives (`hessian`,
 `value_gradient_hessian` and their batch forms `hessians`, `values_gradients_hessians`) are
-exact for degrees 0 to 2 but trivial there (zero or piecewise constant); use degree 3 or more,
+exact for degrees 0 to 2 but of limited use there (degree 1 has dxx = dyy = 0 and a piecewise
+constant dxy); use degree 3 or more,
 and 5 for a full Newton iteration. Supported pixel types are `std::uint8_t`,
 `std::uint16_t`, `float` and `double`. For a degree chosen at run time, use
 `bsi::AnyBSplineImage<T>(view, degree)`; in hot loops, dispatch once with its `visit()`
