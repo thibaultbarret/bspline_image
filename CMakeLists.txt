@@ -1,5 +1,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
 cmake_minimum_required(VERSION 3.21)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+  message(FATAL_ERROR
+    "In-source builds are not allowed. Use a separate build directory, e.g.\n"
+    "  cmake -S . -B build        (or: cmake --preset dev)\n"
+    "and delete the CMakeCache.txt file and the CMakeFiles/ directory "
+    "if they were created in the source tree.")
+endif()
+
 project(bspline_image VERSION 0.1.0 LANGUAGES CXX)
 
 option(BSI_BUILD_TESTS "Build the unit tests" ${PROJECT_IS_TOP_LEVEL})

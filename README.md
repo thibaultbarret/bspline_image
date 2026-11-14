@@ -112,6 +112,18 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+In-source builds are refused: always configure into a separate directory.
+
+CMake presets (`dev`, `release`, `python`, `docs`, `sanitize`; list them with
+`cmake --list-presets`) provide ready-made configurations, also usable from IDEs:
+
+```sh
+cmake --preset dev && cmake --build --preset dev && ctest --preset dev
+```
+
+Each preset builds in `build/<preset>`, so its options can be browsed and edited
+interactively with `ccmake build/dev`.
+
 Examples are built by default (`build/examples/synthetic_image`, `build/examples/dic_visit`).
 A Release benchmark is available as `bsi_bench`; see `bench/RESULTS.md`.
 
