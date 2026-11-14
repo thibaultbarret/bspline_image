@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: BSD-3-Clause
+[build-system]
+requires = ["scikit-build-core>=0.10", "nanobind==2.4.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "bspline_image"
+version = "0.1.0"
+description = "B-spline image interpolation for sub-pixel grey-level values and gradients"
+requires-python = ">=3.9"
+dependencies = ["numpy"]
+license = "BSD-3-Clause"
+
+[tool.scikit-build]
+wheel.packages = ["python/bspline_image"]
+install.components = ["python"]
+cmake.define = { BSI_BUILD_PYTHON = "ON", BSI_BUILD_TESTS = "OFF", BSI_BUILD_EXAMPLES = "OFF", BSI_BUILD_BENCH = "OFF" }
+build-dir = "build/{wheel_tag}"

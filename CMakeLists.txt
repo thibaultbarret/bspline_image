@@ -1,10 +1,22 @@
 # SPDX-License-Identifier: BSD-3-Clause
 cmake_minimum_required(VERSION 3.21)
+
+file(REAL_PATH "${CMAKE_CURRENT_SOURCE_DIR}" _bsi_src_dir)
+file(REAL_PATH "${CMAKE_CURRENT_BINARY_DIR}" _bsi_bin_dir)
+if(_bsi_src_dir STREQUAL _bsi_bin_dir)
+  message(FATAL_ERROR
+    "In-source builds are not allowed. Use a separate build directory, e.g.\n"
+    "  cmake -S . -B build        (or: cmake --preset dev)\n"
+    "and delete the CMakeCache.txt file and the CMakeFiles/ directory "
+    "if they were created in the source tree.")
+endif()
+
 project(bspline_image VERSION 0.1.0 LANGUAGES CXX)
 
 option(BSI_BUILD_TESTS "Build the unit tests" ${PROJECT_IS_TOP_LEVEL})
 option(BSI_BUILD_EXAMPLES "Build the examples" ${PROJECT_IS_TOP_LEVEL})
 option(BSI_BUILD_BENCH "Build the benchmarks" ${PROJECT_IS_TOP_LEVEL})
+option(BSI_BUILD_PYTHON "Build the Python bindings (nanobind)" OFF)
 option(BSI_BUILD_DOCS "Build the Doxygen documentation" OFF)
 option(BSI_WARNINGS_AS_ERRORS "Treat warnings as errors on internal targets" OFF)
 option(BSI_SANITIZE "Enable AddressSanitizer and UBSan on internal targets" OFF)
@@ -62,6 +74,10 @@ endif()
 
 if(BSI_BUILD_BENCH)
   add_subdirectory(bench)
+endif()
+
+if(BSI_BUILD_PYTHON)
+  add_subdirectory(python)
 endif()
 
 if(BSI_BUILD_DOCS)

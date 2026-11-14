@@ -1,0 +1,90 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}"
+    },
+    {
+      "name": "dev",
+      "displayName": "Development (Debug, tests, warnings as errors)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BSI_WARNINGS_AS_ERRORS": "ON",
+        "BSI_BUILD_TESTS": "ON",
+        "BSI_BUILD_EXAMPLES": "ON",
+        "BSI_BUILD_BENCH": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release (examples and benchmark)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BSI_BUILD_TESTS": "OFF",
+        "BSI_BUILD_EXAMPLES": "ON",
+        "BSI_BUILD_BENCH": "ON"
+      }
+    },
+    {
+      "name": "python",
+      "displayName": "Python bindings (Release)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BSI_BUILD_PYTHON": "ON",
+        "BSI_BUILD_TESTS": "OFF",
+        "BSI_BUILD_EXAMPLES": "OFF",
+        "BSI_BUILD_BENCH": "OFF"
+      }
+    },
+    {
+      "name": "docs",
+      "displayName": "Doxygen documentation",
+      "inherits": "base",
+      "cacheVariables": {
+        "BSI_BUILD_DOCS": "ON",
+        "BSI_BUILD_TESTS": "OFF",
+        "BSI_BUILD_EXAMPLES": "OFF",
+        "BSI_BUILD_BENCH": "OFF"
+      }
+    },
+    {
+      "name": "sanitize",
+      "displayName": "ASan + UBSan (Debug, tests)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BSI_SANITIZE": "ON",
+        "BSI_WARNINGS_AS_ERRORS": "ON",
+        "BSI_BUILD_TESTS": "ON",
+        "BSI_BUILD_EXAMPLES": "OFF",
+        "BSI_BUILD_BENCH": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "dev", "configurePreset": "dev" },
+    { "name": "release", "configurePreset": "release" },
+    { "name": "python", "configurePreset": "python" },
+    { "name": "docs", "configurePreset": "docs", "targets": ["docs"] },
+    { "name": "sanitize", "configurePreset": "sanitize" }
+  ],
+  "testPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "sanitize",
+      "configurePreset": "sanitize",
+      "output": { "outputOnFailure": true }
+    }
+  ]
+}

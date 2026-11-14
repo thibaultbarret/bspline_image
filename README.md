@@ -58,6 +58,32 @@ Pixel (i, j) sits at coordinate (x = i, y = j). Supported pixel types are `std::
 `bsi::AnyBSplineImage<T>(view, degree)`; in hot loops, dispatch once with its `visit()`
 method.
 
+## Python
+
+Python bindings (nanobind) are available for local use. The module is not published on
+PyPI; install it from a checkout, preferably in a virtual environment (needs a C++20
+compiler and CMake):
+
+```sh
+python3 -m venv .venv && .venv/bin/pip install .
+```
+
+```python
+import numpy as np
+import bspline_image as bsi
+
+img = np.random.default_rng(0).uniform(0, 255, (64, 48))   # shape (height, width)
+spline = bsi.BSplineImage(img, degree=3)                   # prefiltered once
+print(spline.value(10.25, 20.75))                          # x = column, y = row
+values, dx, dy = spline.values_and_gradients(np.array([1.5, 2.5]), np.array([3.5, 4.5]))
+```
+
+Images are indexed `img[y, x]`: x is the column and y the row, so pixel `img[y, x]` sits at
+coordinate (x, y). Batch methods take `xs` and `ys` arrays of identical shape. Values match
+SciPy: `s.values(xs, ys)` equals
+`scipy.ndimage.map_coordinates(img, [ys, xs], order=degree, mode='mirror')` for degrees 0
+to 5.
+
 ## Degrees
 
 | Degree | Interpolant | Prefilter | Poles | Support (samples) |
@@ -85,6 +111,18 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBSI_WARNINGS_AS_ERRORS=O
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
+
+In-source builds are refused: always configure into a separate directory.
+
+CMake presets (`dev`, `release`, `python`, `docs`, `sanitize`; list them with
+`cmake --list-presets`) provide ready-made configurations, also usable from IDEs:
+
+```sh
+cmake --preset dev && cmake --build --preset dev && ctest --preset dev
+```
+
+Each preset builds in `build/<preset>`, so its options can be browsed and edited
+interactively with `ccmake build/dev`.
 
 Examples are built by default (`build/examples/synthetic_image`, `build/examples/dic_visit`).
 A Release benchmark is available as `bsi_bench`; see `bench/RESULTS.md`.
