@@ -144,6 +144,133 @@ TYPED_TEST(BSplineImageT, BatchEqualsPointwise) {
     }
 }
 
+TYPED_TEST(BSplineImageT, HessianReproducesQuadraticsInInterior) {
+    constexpr int D = TestFixture::degree;
+    if constexpr (D < 2) {
+        GTEST_SKIP() << "quadratics are only reproduced for degree >= 2";
+    } else {
+        constexpr double a = 0.013, b = -0.021, c = 0.008, d = 0.4, e = -0.3, g = 5.0;
+        // Larger than in ReproducesPolynomialsInInterior: the mirror border perturbs second
+        // derivatives more, and the slow decay of degree 7 needs the zone further inside.
+        constexpr std::ptrdiff_t n = 96;
+        std::vector<double> img(std::size_t(n * n));
+        for (std::ptrdiff_t j = 0; j < n; ++j) {
+            for (std::ptrdiff_t i = 0; i < n; ++i) {
+                const double x = double(i);
+                const double y = double(j);
+                img[std::size_t(j * n + i)] = a * x * x + b * x * y + c * y * y + d * x + e * y + g;
+            }
+        }
+        const bsi::BSplineImage<double, D> s(view_of(img, n, n, n));
+        for (double y = 40.0; y <= 56.0; y += 0.37) {
+            for (double x = 40.0; x <= 56.0; x += 0.37) {
+                const auto h = s.hessian(x, y);
+                EXPECT_NEAR(h.dxx, 2.0 * a, 1e-6);
+                EXPECT_NEAR(h.dxy, b, 1e-6);
+                EXPECT_NEAR(h.dyy, 2.0 * c, 1e-6);
+            }
+        }
+    }
+}
+
+TYPED_TEST(BSplineImageT, HessianMatchesFiniteDifferences) {
+    constexpr int D = TestFixture::degree;
+    if constexpr (D < 3) {
+        GTEST_SKIP() << "Hessian is piecewise constant or zero for degree < 3";
+    } else {
+        const auto img = make_image<double>(kW, kH, kW);
+        const bsi::BSplineImage<double, D> s(view_of(img, kW, kH, kW));
+        constexpr double h = 1e-5;
+        for (int k = 0; k < 30; ++k) {
+            const double x = 2.3 + 0.61 * k * 0.97;
+            const double y = 1.7 + 0.43 * k * 0.9;
+            const auto r = s.hessian(x, y);
+            const double fd_xx = (s.gradient(x + h, y).dx - s.gradient(x - h, y).dx) / (2 * h);
+            const double fd_yy = (s.gradient(x, y + h).dy - s.gradient(x, y - h).dy) / (2 * h);
+            const double fd_xy = (s.gradient(x, y + h).dx - s.gradient(x, y - h).dx) / (2 * h);
+            EXPECT_NEAR(r.dxx, fd_xx, 1e-6);
+            EXPECT_NEAR(r.dyy, fd_yy, 1e-6);
+            EXPECT_NEAR(r.dxy, fd_xy, 1e-6);
+        }
+    }
+}
+
+TYPED_TEST(BSplineImageT, HessianBatchEqualsPointwise) {
+    constexpr int D = TestFixture::degree;
+    const auto img = make_image<double>(kW, kH, kW);
+    const bsi::BSplineImage<double, D> s(view_of(img, kW, kH, kW));
+    constexpr std::size_t n = 100;
+    std::vector<double> xs(n), ys(n);
+    std::vector<double> dxx(n), dxy(n), dyy(n);
+    std::vector<double> v(n), dx(n), dy(n), dxx2(n), dxy2(n), dyy2(n);
+    for (std::size_t k = 0; k < n; ++k) {
+        xs[k] = -2.0 + 0.27 * double(k);
+        ys[k] = -1.5 + 0.19 * double(k);
+    }
+    s.hessians(xs, ys, dxx, dxy, dyy);
+    s.values_gradients_hessians(xs, ys, v, dx, dy, dxx2, dxy2, dyy2);
+    for (std::size_t k = 0; k < n; ++k) {
+        const auto vgh = s.value_gradient_hessian(xs[k], ys[k]);
+        const auto h = s.hessian(xs[k], ys[k]);
+        const auto vg = s.value_and_gradient(xs[k], ys[k]);
+        EXPECT_TRUE(bit_equal(h.dxx, vgh.dxx));
+        EXPECT_TRUE(bit_equal(h.dxy, vgh.dxy));
+        EXPECT_TRUE(bit_equal(h.dyy, vgh.dyy));
+        EXPECT_TRUE(bit_equal(vgh.value, vg.value));
+        EXPECT_TRUE(bit_equal(vgh.dx, vg.dx));
+        EXPECT_TRUE(bit_equal(vgh.dy, vg.dy));
+        EXPECT_TRUE(bit_equal(dxx[k], h.dxx));
+        EXPECT_TRUE(bit_equal(dxy[k], h.dxy));
+        EXPECT_TRUE(bit_equal(dyy[k], h.dyy));
+        EXPECT_TRUE(bit_equal(v[k], vgh.value));
+        EXPECT_TRUE(bit_equal(dx[k], vgh.dx));
+        EXPECT_TRUE(bit_equal(dy[k], vgh.dy));
+        EXPECT_TRUE(bit_equal(dxx2[k], vgh.dxx));
+        EXPECT_TRUE(bit_equal(dxy2[k], vgh.dxy));
+        EXPECT_TRUE(bit_equal(dyy2[k], vgh.dyy));
+    }
+}
+
+TYPED_TEST(BSplineImageT, HessianTinyImages) {
+    constexpr int D = TestFixture::degree;
+    const std::ptrdiff_t shapes[][2] = {{1, 5}, {5, 1}};
+    for (const auto& shape : shapes) {
+        const auto img = make_image<double>(shape[0], shape[1], shape[0]);
+        const bsi::BSplineImage<double, D> s(view_of(img, shape[0], shape[1], shape[0]));
+        for (double t = -1.3; t < 6.0; t += 0.37) {
+            const auto h = s.hessian(t, t * 0.8);
+            EXPECT_FALSE(std::isnan(h.dxx));
+            EXPECT_FALSE(std::isnan(h.dxy));
+            EXPECT_FALSE(std::isnan(h.dyy));
+            if (shape[0] == 1) {  // single column: no variation along x
+                EXPECT_NEAR(h.dxx, 0.0, 1e-9);
+            } else {  // single row: no variation along y
+                EXPECT_NEAR(h.dyy, 0.0, 1e-9);
+            }
+            EXPECT_NEAR(h.dxy, 0.0, 1e-9);
+        }
+    }
+}
+
+TYPED_TEST(BSplineImageT, HessianFloatMatchesDouble) {
+    constexpr int D = TestFixture::degree;
+    const auto img = make_image<float>(kW, kH, kW);
+    const bsi::BSplineImage<float, D> sf(view_of(img, kW, kH, kW));
+    const bsi::BSplineImage<double, D> sd(view_of(img, kW, kH, kW));
+    // Second derivatives amplify the float rounding of the coefficients, so the bound of
+    // FloatInterpolatesPixels (2e-3) is relaxed by a factor 100.
+    constexpr double tol = 100 * 2e-3;
+    for (double y = 1.13; y < double(kH) - 1.0; y += 0.83) {
+        for (double x = 1.13; x < double(kW) - 1.0; x += 0.71) {
+            const auto hf = sf.hessian(float(x), float(y));
+            const auto hd = sd.hessian(float(x), float(y));
+            EXPECT_NEAR(double(hf.dxx), hd.dxx, tol);
+            EXPECT_NEAR(double(hf.dxy), hd.dxy, tol);
+            EXPECT_NEAR(double(hf.dyy), hd.dyy, tol);
+        }
+    }
+}
+
 TYPED_TEST(BSplineImageT, CopyAndMoveKeepResults) {
     constexpr int D = TestFixture::degree;
     const auto img = make_image<double>(kW, kH, kW);

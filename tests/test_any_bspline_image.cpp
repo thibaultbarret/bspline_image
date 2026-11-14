@@ -67,6 +67,19 @@ void expect_matches_core() {
         EXPECT_TRUE(bit_equal(vg.value, vgc.value));
         EXPECT_TRUE(bit_equal(vg.dx, vgc.dx));
         EXPECT_TRUE(bit_equal(vg.dy, vgc.dy));
+        const auto h = any.hessian(xs[k], ys[k]);
+        const auto hc = core.hessian(xs[k], ys[k]);
+        EXPECT_TRUE(bit_equal(h.dxx, hc.dxx));
+        EXPECT_TRUE(bit_equal(h.dxy, hc.dxy));
+        EXPECT_TRUE(bit_equal(h.dyy, hc.dyy));
+        const auto a = any.value_gradient_hessian(xs[k], ys[k]);
+        const auto ac = core.value_gradient_hessian(xs[k], ys[k]);
+        EXPECT_TRUE(bit_equal(a.value, ac.value));
+        EXPECT_TRUE(bit_equal(a.dx, ac.dx));
+        EXPECT_TRUE(bit_equal(a.dy, ac.dy));
+        EXPECT_TRUE(bit_equal(a.dxx, ac.dxx));
+        EXPECT_TRUE(bit_equal(a.dxy, ac.dxy));
+        EXPECT_TRUE(bit_equal(a.dyy, ac.dyy));
     }
 
     std::vector<double> v(kPoints), dx(kPoints), dy(kPoints);
@@ -83,6 +96,22 @@ void expect_matches_core() {
     EXPECT_EQ(std::memcmp(v.data(), vc.data(), kPoints * sizeof(double)), 0);
     EXPECT_EQ(std::memcmp(dx.data(), dxc.data(), kPoints * sizeof(double)), 0);
     EXPECT_EQ(std::memcmp(dy.data(), dyc.data(), kPoints * sizeof(double)), 0);
+
+    std::vector<double> dxx(kPoints), dxy(kPoints), dyy(kPoints);
+    std::vector<double> dxxc(kPoints), dxyc(kPoints), dyyc(kPoints);
+    any.hessians(xs, ys, dxx, dxy, dyy);
+    core.hessians(xs, ys, dxxc, dxyc, dyyc);
+    EXPECT_EQ(std::memcmp(dxx.data(), dxxc.data(), kPoints * sizeof(double)), 0);
+    EXPECT_EQ(std::memcmp(dxy.data(), dxyc.data(), kPoints * sizeof(double)), 0);
+    EXPECT_EQ(std::memcmp(dyy.data(), dyyc.data(), kPoints * sizeof(double)), 0);
+    any.values_gradients_hessians(xs, ys, v, dx, dy, dxx, dxy, dyy);
+    core.values_gradients_hessians(xs, ys, vc, dxc, dyc, dxxc, dxyc, dyyc);
+    EXPECT_EQ(std::memcmp(v.data(), vc.data(), kPoints * sizeof(double)), 0);
+    EXPECT_EQ(std::memcmp(dx.data(), dxc.data(), kPoints * sizeof(double)), 0);
+    EXPECT_EQ(std::memcmp(dy.data(), dyc.data(), kPoints * sizeof(double)), 0);
+    EXPECT_EQ(std::memcmp(dxx.data(), dxxc.data(), kPoints * sizeof(double)), 0);
+    EXPECT_EQ(std::memcmp(dxy.data(), dxyc.data(), kPoints * sizeof(double)), 0);
+    EXPECT_EQ(std::memcmp(dyy.data(), dyyc.data(), kPoints * sizeof(double)), 0);
 }
 
 template <int... Ds>
@@ -158,6 +187,16 @@ TEST(AnyBSplineImage, FloatFacadeCallsEveryMethod) {
     EXPECT_TRUE(bit_equal(dx[9], core.gradient(xs[9], ys[9]).dx));
     any.values_and_gradients(xs, ys, v, dx, dy);
     EXPECT_TRUE(bit_equal(dy[9], core.gradient(xs[9], ys[9]).dy));
+
+    const auto h = any.hessian(xs[7], ys[7]);
+    EXPECT_TRUE(bit_equal(h.dxy, core.hessian(xs[7], ys[7]).dxy));
+    const auto vgh = any.value_gradient_hessian(xs[7], ys[7]);
+    EXPECT_TRUE(bit_equal(vgh.dyy, core.value_gradient_hessian(xs[7], ys[7]).dyy));
+    std::vector<float> dxx(kPoints), dxy(kPoints), dyy(kPoints);
+    any.hessians(xs, ys, dxx, dxy, dyy);
+    EXPECT_TRUE(bit_equal(dxx[9], core.hessian(xs[9], ys[9]).dxx));
+    any.values_gradients_hessians(xs, ys, v, dx, dy, dxx, dxy, dyy);
+    EXPECT_TRUE(bit_equal(dyy[9], core.hessian(xs[9], ys[9]).dyy));
     EXPECT_EQ(any.visit([](const auto& s) { return s.width(); }), kW);
 }
 

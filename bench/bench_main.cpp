@@ -126,10 +126,28 @@ void bench_row(const std::vector<float>& image) {
         });
     });
 
+    const double core_vgh = time_ns_per_point([&] {
+        T acc{};
+        for (std::size_t k = 0; k < kPointCount; ++k) {
+            const auto r = core.value_gradient_hessian(pts.xs[k], pts.ys[k]);
+            acc += r.value + r.dx + r.dy + r.dxx + r.dxy + r.dyy;
+        }
+        return static_cast<double>(acc);
+    });
+    const double facade_vgh = time_ns_per_point([&] {
+        T acc{};
+        for (std::size_t k = 0; k < kPointCount; ++k) {
+            const auto r = any.value_gradient_hessian(pts.xs[k], pts.ys[k]);
+            acc += r.value + r.dx + r.dy + r.dxx + r.dxy + r.dyy;
+        }
+        return static_cast<double>(acc);
+    });
+
     const double overhead = 100.0 * (facade_visit - core_value) / core_value;
-    std::printf("| %d | %s | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f | %+.1f%% |\n",
+    std::printf("| %d | %s | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f | %+.1f%% |\n",
                 Degree, sizeof(T) == sizeof(float) ? "float" : "double", core_value, core_vg,
-                facade_point, facade_vg_point, facade_visit, facade_vg_visit, overhead);
+                core_vgh, facade_point, facade_vg_point, facade_vgh, facade_visit,
+                facade_vg_visit, overhead);
 }
 
 template <int Degree>
@@ -145,10 +163,11 @@ int main() {
     std::printf("Image %lldx%lld, %zu points, min of %d runs (ns/point)\n\n",
                 static_cast<long long>(kImageSize), static_cast<long long>(kImageSize),
                 kPointCount, kRepetitions);
-    std::puts("| degree | type | core value | core value_and_gradient | facade value | "
-              "facade value_and_gradient | facade + visit value | "
+    std::puts("| degree | type | core value | core value_and_gradient | core value_gradient_hessian | "
+              "facade value | facade value_and_gradient | facade value_gradient_hessian | "
+              "facade + visit value | "
               "facade + visit value_and_gradient | visit vs core value |");
-    std::puts("|---|---|---|---|---|---|---|---|---|");
+    std::puts("|---|---|---|---|---|---|---|---|---|---|---|");
     bench_degree<1>(image);
     bench_degree<3>(image);
     bench_degree<5>(image);

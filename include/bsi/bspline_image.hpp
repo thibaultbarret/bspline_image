@@ -28,7 +28,7 @@ concept Pixel = std::same_as<P, std::uint8_t> || std::same_as<P, std::uint16_t> 
 /// @brief B-spline interpolated image of fixed degree.
 ///
 /// Owns the prefiltered coefficients, stored as `T` with a mirror border, and evaluates the
-/// interpolated value and gradient at arbitrary real coordinates. Pixel (i, j) sits at
+/// interpolated value, gradient and Hessian at arbitrary real coordinates. Pixel (i, j) sits at
 /// coordinate (x = i, y = j); coordinates outside the image are folded by mirror symmetry.
 /// @tparam T Floating-point type of the stored coefficients and of evaluation results.
 /// @tparam Degree Spline degree, in [0, `max_degree`].
@@ -104,6 +104,30 @@ public:
         return evaluate_with_gradient<T, Degree>(coefficients(), x, y);
     }
 
+    /// @brief Interpolated second derivatives at (x, y).
+    ///
+    /// Degrees 0 to 2 give exact values (zero, or piecewise constant) but are not useful
+    /// for second derivatives; degree 3 or more is recommended, and 5 for a full Newton
+    /// iteration.
+    /// @param x Column coordinate.
+    /// @param y Row coordinate.
+    /// @return Second derivatives (dxx, dxy, dyy); NaN if a coordinate is not finite.
+    Hessian<T> hessian(T x, T y) const noexcept {
+        const auto r = evaluate_with_hessian<T, Degree>(coefficients(), x, y);
+        return Hessian<T>{r.dxx, r.dxy, r.dyy};
+    }
+
+    /// @brief Interpolated value, gradient and Hessian at (x, y).
+    ///
+    /// Value and gradient are identical to those of `value_and_gradient`. See `hessian` for
+    /// the recommended degree.
+    /// @param x Column coordinate.
+    /// @param y Row coordinate.
+    /// @return Value, first and second derivatives; NaN if a coordinate is not finite.
+    ValueGradientHessian<T> value_gradient_hessian(T x, T y) const noexcept {
+        return evaluate_with_hessian<T, Degree>(coefficients(), x, y);
+    }
+
     /// @brief Evaluate the value at many points.
     /// @param xs Column coordinates.
     /// @param ys Row coordinates.
@@ -151,6 +175,54 @@ public:
             v[k] = vg.value;
             dx[k] = vg.dx;
             dy[k] = vg.dy;
+        }
+    }
+
+    /// @brief Evaluate the second derivatives at many points.
+    /// @param xs Column coordinates.
+    /// @param ys Row coordinates.
+    /// @param dxx Output second derivatives along x.
+    /// @param dxy Output mixed second derivatives.
+    /// @param dyy Output second derivatives along y.
+    /// @pre All spans have the same size (checked by `assert` in debug builds).
+    void hessians(std::span<const T> xs, std::span<const T> ys, std::span<T> dxx,
+                  std::span<T> dxy, std::span<T> dyy) const noexcept {
+        assert(xs.size() == ys.size() && xs.size() == dxx.size() && xs.size() == dxy.size() &&
+               xs.size() == dyy.size());
+        const auto c = coefficients();
+        for (std::size_t k = 0; k < xs.size(); ++k) {
+            const auto r = evaluate_with_hessian<T, Degree>(c, xs[k], ys[k]);
+            dxx[k] = r.dxx;
+            dxy[k] = r.dxy;
+            dyy[k] = r.dyy;
+        }
+    }
+
+    /// @brief Evaluate value, gradient and Hessian at many points.
+    /// @param xs Column coordinates.
+    /// @param ys Row coordinates.
+    /// @param v Output values.
+    /// @param dx Output x derivatives.
+    /// @param dy Output y derivatives.
+    /// @param dxx Output second derivatives along x.
+    /// @param dxy Output mixed second derivatives.
+    /// @param dyy Output second derivatives along y.
+    /// @pre All spans have the same size (checked by `assert` in debug builds).
+    void values_gradients_hessians(std::span<const T> xs, std::span<const T> ys, std::span<T> v,
+                                   std::span<T> dx, std::span<T> dy, std::span<T> dxx,
+                                   std::span<T> dxy, std::span<T> dyy) const noexcept {
+        assert(xs.size() == ys.size() && xs.size() == v.size() && xs.size() == dx.size() &&
+               xs.size() == dy.size() && xs.size() == dxx.size() && xs.size() == dxy.size() &&
+               xs.size() == dyy.size());
+        const auto c = coefficients();
+        for (std::size_t k = 0; k < xs.size(); ++k) {
+            const auto r = evaluate_with_hessian<T, Degree>(c, xs[k], ys[k]);
+            v[k] = r.value;
+            dx[k] = r.dx;
+            dy[k] = r.dy;
+            dxx[k] = r.dxx;
+            dxy[k] = r.dxy;
+            dyy[k] = r.dyy;
         }
     }
 

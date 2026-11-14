@@ -10,7 +10,7 @@ image generation and digital image correlation (DIC), where the interpolated val
 gradient are evaluated millions of times.
 
 - Spline degrees 0 to 7, odd and even, chosen at compile time or at run time.
-- Value and gradient evaluation at arbitrary real coordinates.
+- Value, gradient and Hessian evaluation at arbitrary real coordinates.
 - Mirror boundary conditions (same as SciPy `mode='mirror'`).
 - No dependency beyond the C++20 standard library; header-only.
 - GPU-ready kernels: the lowest layer is allocation-free, exception-free and annotated
@@ -50,10 +50,15 @@ int main() {
     const bsi::BSplineImage<double, 3> spline(view);          // cubic, prefiltered once
     const auto vg = spline.value_and_gradient(10.25, 20.75);  // sub-pixel position
     // vg.value, vg.dx, vg.dy
+    auto h = spline.value_gradient_hessian(10.25, 20.75);     // adds second derivatives
+    // h.value, h.dx, h.dy, h.dxx, h.dxy, h.dyy
 }
 ```
 
-Pixel (i, j) sits at coordinate (x = i, y = j). Supported pixel types are `std::uint8_t`,
+Pixel (i, j) sits at coordinate (x = i, y = j). Second derivatives (`hessian`,
+`value_gradient_hessian` and their batch forms `hessians`, `values_gradients_hessians`) are
+exact for degrees 0 to 2 but trivial there (zero or piecewise constant); use degree 3 or more,
+and 5 for a full Newton iteration. Supported pixel types are `std::uint8_t`,
 `std::uint16_t`, `float` and `double`. For a degree chosen at run time, use
 `bsi::AnyBSplineImage<T>(view, degree)`; in hot loops, dispatch once with its `visit()`
 method.
