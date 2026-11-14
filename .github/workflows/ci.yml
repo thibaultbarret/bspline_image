@@ -1,0 +1,138 @@
+# SPDX-License-Identifier: BSD-3-Clause
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build-test:
+    name: ${{ matrix.name }} ${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Debug, Release]
+        include:
+          - { name: gcc-11, os: ubuntu-22.04, cc: gcc-11, cxx: g++-11, packages: "gcc-11 g++-11 ninja-build" }
+          - { name: clang-14, os: ubuntu-22.04, cc: clang-14, cxx: clang++-14, packages: "clang-14 ninja-build" }
+          - { name: gcc-14, os: ubuntu-24.04, cc: gcc-14, cxx: g++-14, packages: "gcc-14 g++-14 ninja-build" }
+          - { name: clang-18, os: ubuntu-24.04, cc: clang-18, cxx: clang++-18, packages: "clang-18 ninja-build" }
+          - { name: apple-clang, os: macos-14 }
+          - { name: msvc, os: windows-2022 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install compiler and Ninja (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.packages }}
+          echo "CC=${{ matrix.cc }}" >> "$GITHUB_ENV"
+          echo "CXX=${{ matrix.cxx }}" >> "$GITHUB_ENV"
+
+      - name: Install Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: command -v ninja || brew install ninja
+
+      - name: Configure (Ninja)
+        if: runner.os != 'Windows'
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DBSI_WARNINGS_AS_ERRORS=ON
+
+      - name: Configure (Visual Studio)
+        if: runner.os == 'Windows'
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DBSI_WARNINGS_AS_ERRORS=ON
+
+      - name: Build
+        run: cmake --build build --config ${{ matrix.build_type }}
+
+      - name: Test
+        run: ctest --test-dir build -C ${{ matrix.build_type }} --output-on-failure
+
+  sanitizers:
+    name: sanitizers (clang-18 Debug)
+    runs-on: ubuntu-24.04
+    env:
+      CC: clang-18
+      CXX: clang++-18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 ninja-build
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          -DBSI_WARNINGS_AS_ERRORS=ON -DBSI_SANITIZE=ON
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  coverage:
+    name: coverage (gcc-14)
+    runs-on: ubuntu-24.04
+    env:
+      CC: gcc-14
+      CXX: g++-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-14 g++-14 ninja-build lcov
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          -DBSI_COVERAGE=ON
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Capture coverage
+        run: |
+          lcov --capture --directory build --output-file cov.info \
+            --gcov-tool gcov-14 --ignore-errors mismatch
+          lcov --remove cov.info '*/tests/*' '*/_deps/*' '/usr/*' '*/examples/*' '*/bench/*' \
+            --output-file cov.info --ignore-errors unused
+      - name: Check threshold
+        run: tools/check_coverage.sh cov.info 80
+
+  install:
+    name: install (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure library without tests
+        run: >
+          cmake -S . -B build
+          -DBSI_BUILD_TESTS=OFF -DBSI_BUILD_EXAMPLES=OFF -DBSI_BUILD_BENCH=OFF
+      - name: Install
+        run: cmake --install build --prefix _install
+      - name: Configure consumer
+        run: cmake -S tests/install_consumer -B build-consumer -DCMAKE_PREFIX_PATH="$PWD/_install"
+      - name: Build consumer
+        run: cmake --build build-consumer --config Release
+      - name: Run consumer
+        run: |
+          exe=$(find build-consumer -type f \( -name consumer -o -name consumer.exe \) | head -n 1)
+          echo "Running $exe"
+          "$exe"

@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: BSD-3-Clause
+name: Docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Doxygen
+        run: sudo apt-get update && sudo apt-get install -y doxygen ninja-build
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja -DBSI_BUILD_DOCS=ON
+          -DBSI_BUILD_TESTS=OFF -DBSI_BUILD_EXAMPLES=OFF -DBSI_BUILD_BENCH=OFF
+      - name: Generate documentation
+        run: cmake --build build --target docs
+      - name: Configure Pages
+        if: github.event_name == 'push'
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/docs/html
+
+  deploy:
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
