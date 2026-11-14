@@ -191,20 +191,30 @@ TYPED_TEST(Evaluate, HessianMatchesFiniteDifferencesOfGradient) {
 
 TYPED_TEST(Evaluate, HessianMirrorSymmetry) {
     constexpr int D = TestFixture::D;
-    PaddedCoefficients<double, D> c(16, 10, smooth_pixel);
+    constexpr std::ptrdiff_t W = 16;
+    constexpr std::ptrdiff_t H = 10;
+    PaddedCoefficients<double, D> c(W, H, smooth_pixel);
     for (double x = 0.13; x < 14.0; x += 0.91) {
         const auto a = bsi::evaluate_with_hessian<double, D>(c.view, x, 4.2);
         const auto b = bsi::evaluate_with_hessian<double, D>(c.view, -x, 4.2);
+        const auto d = bsi::evaluate_with_hessian<double, D>(c.view, 2.0 * (W - 1) - x, 4.2);
         EXPECT_NEAR(b.dxx, a.dxx, 1e-12) << "x=" << x;
         EXPECT_NEAR(b.dyy, a.dyy, 1e-12) << "x=" << x;
         EXPECT_NEAR(b.dxy, -a.dxy, 1e-12) << "x=" << x;
+        EXPECT_NEAR(d.dxx, a.dxx, 1e-12) << "x=" << x;
+        EXPECT_NEAR(d.dyy, a.dyy, 1e-12) << "x=" << x;
+        EXPECT_NEAR(d.dxy, -a.dxy, 1e-12) << "x=" << x;
     }
     for (double y = 0.13; y < 8.0; y += 0.77) {
         const auto a = bsi::evaluate_with_hessian<double, D>(c.view, 3.9, y);
         const auto b = bsi::evaluate_with_hessian<double, D>(c.view, 3.9, -y);
+        const auto d = bsi::evaluate_with_hessian<double, D>(c.view, 3.9, 2.0 * (H - 1) - y);
         EXPECT_NEAR(b.dxx, a.dxx, 1e-12) << "y=" << y;
         EXPECT_NEAR(b.dyy, a.dyy, 1e-12) << "y=" << y;
         EXPECT_NEAR(b.dxy, -a.dxy, 1e-12) << "y=" << y;
+        EXPECT_NEAR(d.dxx, a.dxx, 1e-12) << "y=" << y;
+        EXPECT_NEAR(d.dyy, a.dyy, 1e-12) << "y=" << y;
+        EXPECT_NEAR(d.dxy, -a.dxy, 1e-12) << "y=" << y;
     }
 }
 

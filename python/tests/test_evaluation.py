@@ -197,16 +197,30 @@ def test_hessian_finite_differences():
         assert np.isclose(dyy, (gy_p[1] - gy_m[1]) / (2 * h), **kw)
 
 
+@pytest.mark.parametrize("bad", [float("nan"), np.inf, -np.inf])
+def test_hessian_non_finite_coordinates(bad):
+    s = bsi.BSplineImage(smooth(17, 23), degree=3)
+    for x, y in [(bad, 2.5), (2.5, bad)]:
+        assert all(math.isnan(v) for v in s.value_gradient_hessian(x, y))
+        outs = s.values_gradients_hessians(np.array([x]), np.array([y]))
+        assert len(outs) == 6
+        assert all(np.isnan(o).all() for o in outs)
+
+
 @pytest.mark.parametrize("degree", [0, 1])
-def test_hessian_low_degree_zero(degree):
+def test_hessian_low_degree(degree):
     # Piecewise constant (0) or bilinear (1): dxx and dyy vanish everywhere;
     # the bilinear cross derivative dxy is genuinely non-zero, constant per cell.
     s = bsi.BSplineImage(smooth(17, 23), degree=degree)
     dxx, dxy, dyy = s.hessian(5.3, 7.7)
     assert dxx == 0.0
     assert dyy == 0.0
-    if degree == 0:
-        assert dxy == 0.0
     bxx, bxy, byy = s.hessians(np.array([5.3]), np.array([7.7]))
     assert not bxx.any()
     assert not byy.any()
+    if degree == 0:
+        assert dxy == 0.0
+        assert not bxy.any()
+    else:
+        assert dxy != 0.0
+        assert bxy[0] == dxy

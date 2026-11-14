@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -237,6 +239,7 @@ TYPED_TEST(BSplineImageT, HessianTinyImages) {
     for (const auto& shape : shapes) {
         const auto img = make_image<double>(shape[0], shape[1], shape[0]);
         const bsi::BSplineImage<double, D> s(view_of(img, shape[0], shape[1], shape[0]));
+        double max_along_free_axis = 0.0;
         for (double t = -1.3; t < 6.0; t += 0.37) {
             const auto h = s.hessian(t, t * 0.8);
             EXPECT_FALSE(std::isnan(h.dxx));
@@ -244,10 +247,39 @@ TYPED_TEST(BSplineImageT, HessianTinyImages) {
             EXPECT_FALSE(std::isnan(h.dyy));
             if (shape[0] == 1) {  // single column: no variation along x
                 EXPECT_NEAR(h.dxx, 0.0, 1e-9);
+                max_along_free_axis = std::max(max_along_free_axis, std::abs(h.dyy));
             } else {  // single row: no variation along y
                 EXPECT_NEAR(h.dyy, 0.0, 1e-9);
+                max_along_free_axis = std::max(max_along_free_axis, std::abs(h.dxx));
             }
             EXPECT_NEAR(h.dxy, 0.0, 1e-9);
+        }
+        // The non-degenerate dimension must still carry a non-zero second derivative
+        // (degrees 0 to 2 are piecewise constant or zero, so only checked from degree 3).
+        if (D >= 3) {
+            EXPECT_GT(max_along_free_axis, 1e-6);
+        }
+    }
+}
+
+TYPED_TEST(BSplineImageT, HessianNonFiniteGivesNaN) {
+    const auto img = make_image<double>(kW, kH, kW);
+    const bsi::BSplineImage<double, TestFixture::degree> s(view_of(img, kW, kH, kW));
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    for (const double bad : {nan, inf, -inf}) {
+        for (const auto& pt : {std::pair{bad, 2.5}, std::pair{2.5, bad}}) {
+            const auto h = s.hessian(pt.first, pt.second);
+            EXPECT_TRUE(std::isnan(h.dxx));
+            EXPECT_TRUE(std::isnan(h.dxy));
+            EXPECT_TRUE(std::isnan(h.dyy));
+            const auto r = s.value_gradient_hessian(pt.first, pt.second);
+            EXPECT_TRUE(std::isnan(r.value));
+            EXPECT_TRUE(std::isnan(r.dx));
+            EXPECT_TRUE(std::isnan(r.dy));
+            EXPECT_TRUE(std::isnan(r.dxx));
+            EXPECT_TRUE(std::isnan(r.dxy));
+            EXPECT_TRUE(std::isnan(r.dyy));
         }
     }
 }
@@ -257,9 +289,9 @@ TYPED_TEST(BSplineImageT, HessianFloatMatchesDouble) {
     const auto img = make_image<float>(kW, kH, kW);
     const bsi::BSplineImage<float, D> sf(view_of(img, kW, kH, kW));
     const bsi::BSplineImage<double, D> sd(view_of(img, kW, kH, kW));
-    // Second derivatives amplify the float rounding of the coefficients, so the bound of
-    // FloatInterpolatesPixels (2e-3) is relaxed by a factor 100.
-    constexpr double tol = 100 * 2e-3;
+    // Second derivatives amplify the float rounding of the coefficients: with |H| around 1e3
+    // on this data the measured float error is about 1e-3, so 1e-2 leaves a 10x margin.
+    constexpr double tol = 1e-2;
     for (double y = 1.13; y < double(kH) - 1.0; y += 0.83) {
         for (double x = 1.13; x < double(kW) - 1.0; x += 0.71) {
             const auto hf = sf.hessian(float(x), float(y));
