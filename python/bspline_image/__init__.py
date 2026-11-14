@@ -23,7 +23,7 @@ def _normalise_image(img):
         raise ValueError("image must not be empty")
     if img.dtype not in _NATIVE_PIXEL_DTYPES or not img.dtype.isnative:
         img = img.astype(np.float64)
-    if img.strides[1] != img.itemsize:
+    if img.strides[1] != img.itemsize or img.strides[0] < img.shape[1] * img.itemsize:
         img = np.ascontiguousarray(img)
     return img
 

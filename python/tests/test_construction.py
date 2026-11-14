@@ -102,3 +102,20 @@ def test_invalid_arguments(args):
     kwargs.update(args)
     with pytest.raises(ValueError):
         bsi.BSplineImage(**kwargs)
+
+
+@pytest.mark.parametrize("flip", [np.s_[::-1], np.s_[::-1, ::-1]])
+def test_flipped_views_match_contiguous_copy(flip):
+    view = smooth(17, 23)[flip]
+    got = bsi.BSplineImage(view)
+    ref = bsi.BSplineImage(np.ascontiguousarray(view))
+    for x, y in [(0.3, 0.7), (5.5, 4.25), (20.1, 10.9)]:
+        assert got.value(x, y) == ref.value(x, y)
+
+
+def test_broadcast_zero_row_stride():
+    row = smooth(1, 10)[0]
+    s = bsi.BSplineImage(np.broadcast_to(row, (6, 10)))
+    for j in range(6):
+        for i in range(10):
+            assert abs(s.value(i, j) - row[i]) < 1e-9
