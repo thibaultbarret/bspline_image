@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 cmake_minimum_required(VERSION 3.21)
 
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+file(REAL_PATH "${CMAKE_CURRENT_SOURCE_DIR}" _bsi_src_dir)
+file(REAL_PATH "${CMAKE_CURRENT_BINARY_DIR}" _bsi_bin_dir)
+if(_bsi_src_dir STREQUAL _bsi_bin_dir)
   message(FATAL_ERROR
     "In-source builds are not allowed. Use a separate build directory, e.g.\n"
     "  cmake -S . -B build        (or: cmake --preset dev)\n"
