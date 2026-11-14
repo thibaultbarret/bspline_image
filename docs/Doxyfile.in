@@ -24,6 +24,9 @@ GENERATE_LATEX         = NO
 USE_MATHJAX            = YES
 MATHJAX_VERSION        = MathJax_3
 
+# No Graphviz dependency: some Doxygen builds (e.g. Ubuntu's) default to HAVE_DOT = YES.
+HAVE_DOT               = NO
+
 QUIET                  = YES
 WARNINGS               = YES
 WARN_IF_UNDOCUMENTED   = YES
