@@ -1,8 +1,8 @@
 <!-- SPDX-License-Identifier: BSD-3-Clause -->
 # bspline_image
 
-[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
-[![Docs](https://github.com/OWNER/REPO/actions/workflows/docs.yml/badge.svg)](https://OWNER.github.io/REPO/)
+[![CI](https://github.com/thibaultbarret/bspline_image/actions/workflows/ci.yml/badge.svg)](https://github.com/thibaultbarret/bspline_image/actions/workflows/ci.yml)
+[![Docs](https://github.com/thibaultbarret/bspline_image/actions/workflows/docs.yml/badge.svg)](https://thibaultbarret.github.io/bspline_image/)
 
 `bspline_image` is a header-only C++20 library (namespace `bsi`) for sub-pixel
 interpolation of grey-level images with cardinal B-splines. It is designed for synthetic
@@ -16,7 +16,6 @@ gradient are evaluated millions of times.
 - GPU-ready kernels: the lowest layer is allocation-free, exception-free and annotated
   `BSI_HOST_DEVICE`, so it can be reused in CUDA/HIP/SYCL device code.
 
-> `OWNER/REPO` in the links above is a placeholder for the GitHub repository.
 
 ## Integration
 
@@ -25,7 +24,7 @@ With `FetchContent`:
 ```cmake
 include(FetchContent)
 FetchContent_Declare(bspline_image
-  GIT_REPOSITORY https://github.com/OWNER/REPO.git
+  GIT_REPOSITORY https://github.com/thibaultbarret/bspline_image.git
   GIT_TAG main)
 FetchContent_MakeAvailable(bspline_image)
 target_link_libraries(my_app PRIVATE bsi::bspline_image)
@@ -72,7 +71,7 @@ For degree n, evaluation reads (n + 1)^2 coefficients.
 ## Documentation
 
 API reference and guides (theory, DIC usage, GPU kernels) are built with Doxygen and
-published at <https://OWNER.github.io/REPO/>. To build them locally:
+published at <https://thibaultbarret.github.io/bspline_image/>. To build them locally:
 
 ```sh
 cmake -S . -B build -G Ninja -DBSI_BUILD_DOCS=ON
