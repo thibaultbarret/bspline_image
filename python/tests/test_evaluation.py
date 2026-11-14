@@ -119,3 +119,94 @@ def test_batch_releases_gil():
         results = list(pool.map(lambda _: s.values(xs, ys), range(4)))
     for r in results:
         np.testing.assert_array_equal(r, expected)
+
+
+@pytest.mark.parametrize("degree", range(8))
+def test_hessian_matches_value_gradient_hessian(degree):
+    s = bsi.BSplineImage(smooth(17, 23), degree=degree)
+    rng = np.random.default_rng(degree)
+    for x, y in zip(rng.uniform(0, 22, 20), rng.uniform(0, 16, 20)):
+        x, y = float(x), float(y)
+        full = s.value_gradient_hessian(x, y)
+        assert s.hessian(x, y) == full[3:]
+        assert full[:3] == s.value_and_gradient(x, y)
+
+
+@pytest.mark.parametrize("dtype", [np.float64, np.float32])
+def test_hessian_batch_equals_pointwise(dtype):
+    s = bsi.BSplineImage(smooth(17, 23), degree=5, dtype=dtype)
+    rng = np.random.default_rng(3)
+    xs = rng.uniform(0, 22, (4, 5))
+    ys = rng.uniform(0, 16, (4, 5))
+    full = s.values_gradients_hessians(xs, ys)
+    hess = s.hessians(xs, ys)
+    assert len(full) == 6
+    assert len(hess) == 3
+    assert all(a.shape == (4, 5) and a.dtype == dtype for a in full + hess)
+    for i in range(4):
+        for j in range(5):
+            x, y = float(xs[i, j]), float(ys[i, j])
+            point = s.value_gradient_hessian(x, y)
+            assert tuple(float(a[i, j]) for a in full) == point
+            assert tuple(float(a[i, j]) for a in hess) == point[3:]
+
+
+def test_hessian_empty_batch():
+    s = bsi.BSplineImage(smooth(17, 23), degree=3)
+    xs = ys = np.empty(0)
+    assert all(a.shape == (0,) for a in s.hessians(xs, ys))
+    assert all(a.shape == (0,) for a in s.values_gradients_hessians(xs, ys))
+
+
+def test_hessian_shape_mismatch():
+    s = bsi.BSplineImage(smooth(17, 23), degree=3)
+    with pytest.raises(ValueError):
+        s.hessians(np.zeros((2, 3)), np.zeros((3, 2)))
+    with pytest.raises(ValueError):
+        s.values_gradients_hessians(np.zeros(3), np.zeros(4))
+
+
+def test_core_hessian_rejects_wrong_output():
+    from bspline_image import _core
+
+    c = _core.Spline64(smooth(5, 5), 3)
+    xs = ys = np.zeros(3)
+    good = np.empty(3)
+    with pytest.raises(ValueError):
+        c.hessians(xs, ys, good, good, np.empty(2))
+    with pytest.raises(TypeError):
+        c.hessians(xs, ys, good, good, np.empty(3, dtype=np.float32))
+    with pytest.raises(ValueError):
+        c.values_gradients_hessians(xs, ys, good, good, good, good, good, np.empty(2))
+    with pytest.raises(TypeError):
+        c.values_gradients_hessians(
+            xs, ys, good, good, good, good, good, np.empty(3, dtype=np.float32)
+        )
+
+
+def test_hessian_finite_differences():
+    s = bsi.BSplineImage(smooth(17, 23), degree=5)
+    h = 1e-5
+    for x, y in [(5.3, 7.7), (10.45, 3.2), (15.9, 11.1)]:
+        dxx, dxy, dyy = s.hessian(x, y)
+        gx_p, gy_p = s.gradient(x + h, y)[0], s.gradient(x, y + h)
+        gx_m, gy_m = s.gradient(x - h, y)[0], s.gradient(x, y - h)
+        kw = dict(rtol=1e-5, atol=1e-6)
+        assert np.isclose(dxx, (gx_p - gx_m) / (2 * h), **kw)
+        assert np.isclose(dxy, (gy_p[0] - gy_m[0]) / (2 * h), **kw)
+        assert np.isclose(dyy, (gy_p[1] - gy_m[1]) / (2 * h), **kw)
+
+
+@pytest.mark.parametrize("degree", [0, 1])
+def test_hessian_low_degree_zero(degree):
+    # Piecewise constant (0) or bilinear (1): dxx and dyy vanish everywhere;
+    # the bilinear cross derivative dxy is genuinely non-zero, constant per cell.
+    s = bsi.BSplineImage(smooth(17, 23), degree=degree)
+    dxx, dxy, dyy = s.hessian(5.3, 7.7)
+    assert dxx == 0.0
+    assert dyy == 0.0
+    if degree == 0:
+        assert dxy == 0.0
+    bxx, bxy, byy = s.hessians(np.array([5.3]), np.array([7.7]))
+    assert not bxx.any()
+    assert not byy.any()

@@ -81,6 +81,8 @@ img = np.random.default_rng(0).uniform(0, 255, (64, 48))   # shape (height, widt
 spline = bsi.BSplineImage(img, degree=3)                   # prefiltered once
 print(spline.value(10.25, 20.75))                          # x = column, y = row
 values, dx, dy = spline.values_and_gradients(np.array([1.5, 2.5]), np.array([3.5, 4.5]))
+xs, ys = np.array([1.5, 2.5]), np.array([3.5, 4.5])
+v, dx, dy, dxx, dxy, dyy = spline.values_gradients_hessians(xs, ys)   # degree >= 3 advised
 ```
 
 Images are indexed `img[y, x]`: x is the column and y the row, so pixel `img[y, x]` sits at

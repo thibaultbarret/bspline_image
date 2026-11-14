@@ -111,6 +111,22 @@ class BSplineImage:
         ``value`` and ``gradient``."""
         return self._impl.value_and_gradient(x, y)
 
+    def hessian(self, x: float, y: float) -> Tuple[float, float, float]:
+        """Second derivatives ``(dxx, dxy, dyy)`` at (x = column, y = row).
+
+        Degree 3 or more is recommended (5 for Newton-type refinement). Degree 0
+        gives zeros; degree 1 (bilinear) gives ``dxx = dyy = 0`` and only the
+        cross term ``dxy``.
+        """
+        return self._impl.hessian(x, y)
+
+    def value_gradient_hessian(
+        self, x: float, y: float
+    ) -> Tuple[float, float, float, float, float, float]:
+        """Return ``(value, dx, dy, dxx, dxy, dyy)`` at (x = column, y = row),
+        bit-identical to ``value_and_gradient`` and ``hessian``."""
+        return self._impl.value_gradient_hessian(x, y)
+
     def _coords(
         self, xs: npt.ArrayLike, ys: npt.ArrayLike
     ) -> Tuple[np.ndarray, np.ndarray, Tuple[int, ...]]:
@@ -165,3 +181,31 @@ class BSplineImage:
         dy = np.empty(fx.shape, dtype=self._dtype)
         self._impl.values_and_gradients(fx, fy, v, dx, dy)
         return v.reshape(shape), dx.reshape(shape), dy.reshape(shape)
+
+    def hessians(
+        self, xs: npt.ArrayLike, ys: npt.ArrayLike
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Return ``(dxx, dxy, dyy)`` arrays at (xs = columns, ys = rows).
+
+        ``xs`` and ``ys`` must have identical shapes (no broadcasting); the
+        outputs have that shape, and 0-d inputs give 0-d arrays.
+        """
+        fx, fy, shape = self._coords(xs, ys)
+        dxx = np.empty(fx.shape, dtype=self._dtype)
+        dxy = np.empty(fx.shape, dtype=self._dtype)
+        dyy = np.empty(fx.shape, dtype=self._dtype)
+        self._impl.hessians(fx, fy, dxx, dxy, dyy)
+        return dxx.reshape(shape), dxy.reshape(shape), dyy.reshape(shape)
+
+    def values_gradients_hessians(
+        self, xs: npt.ArrayLike, ys: npt.ArrayLike
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Return ``(values, dx, dy, dxx, dxy, dyy)`` arrays at (xs = columns, ys = rows).
+
+        ``xs`` and ``ys`` must have identical shapes (no broadcasting); the
+        outputs have that shape, and 0-d inputs give 0-d arrays.
+        """
+        fx, fy, shape = self._coords(xs, ys)
+        outs = tuple(np.empty(fx.shape, dtype=self._dtype) for _ in range(6))
+        self._impl.values_gradients_hessians(fx, fy, *outs)
+        return tuple(o.reshape(shape) for o in outs)  # type: ignore[return-value]
