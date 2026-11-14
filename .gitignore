@@ -3,3 +3,7 @@ build*/
 _install/
 .DS_Store
 *.pgm
+.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/
