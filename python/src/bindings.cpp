@@ -97,7 +97,7 @@ void bind_spline(nb::module_& m, const char* name) {
                 nb::gil_scoped_release release;
                 s.values(x, y, o);
             },
-            nb::arg("xs"), nb::arg("ys"), nb::arg("out"))
+            nb::arg("xs"), nb::arg("ys"), nb::arg("out").noconvert())
         .def(
             "gradients",
             [](const Spline& s, const In<T>& xs, const In<T>& ys, const Out<T>& dx,
@@ -110,7 +110,7 @@ void bind_spline(nb::module_& m, const char* name) {
                 nb::gil_scoped_release release;
                 s.gradients(x, y, gx, gy);
             },
-            nb::arg("xs"), nb::arg("ys"), nb::arg("dx"), nb::arg("dy"))
+            nb::arg("xs"), nb::arg("ys"), nb::arg("dx").noconvert(), nb::arg("dy").noconvert())
         .def(
             "values_and_gradients",
             [](const Spline& s, const In<T>& xs, const In<T>& ys, const Out<T>& v,
@@ -124,7 +124,7 @@ void bind_spline(nb::module_& m, const char* name) {
                 nb::gil_scoped_release release;
                 s.values_and_gradients(x, y, o, gx, gy);
             },
-            nb::arg("xs"), nb::arg("ys"), nb::arg("v"), nb::arg("dx"), nb::arg("dy"));
+            nb::arg("xs"), nb::arg("ys"), nb::arg("v").noconvert(), nb::arg("dx").noconvert(), nb::arg("dy").noconvert());
 }
 
 }  // namespace
