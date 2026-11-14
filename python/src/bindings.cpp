@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <new>
+#include <span>
 #include <stdexcept>
 
 #include <nanobind/nanobind.h>
@@ -15,6 +16,28 @@ namespace {
 
 template <class P>
 using Image = nb::ndarray<const P, nb::ndim<2>, nb::device::cpu>;
+
+template <class T>
+using In = nb::ndarray<const T, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
+template <class T>
+using Out = nb::ndarray<T, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
+
+template <class T>
+std::span<const T> in_span(const In<T>& a) {
+    return {a.data(), a.size()};
+}
+
+template <class T>
+std::span<T> out_span(const Out<T>& a) {
+    return {a.data(), a.size()};
+}
+
+template <class... Arrays>
+void require_same_size(std::size_t n, const Arrays&... arrays) {
+    if (((arrays.size() != n) || ...)) {
+        throw std::invalid_argument("all arrays must have the same size");
+    }
+}
 
 template <class T, class P>
 bsi::AnyBSplineImage<T> make_spline(const Image<P>& image, int degree) {
@@ -63,7 +86,45 @@ void bind_spline(nb::module_& m, const char* name) {
                 const auto r = s.value_and_gradient(x, y);
                 return nb::make_tuple(r.value, r.dx, r.dy);
             },
-            nb::arg("x"), nb::arg("y"));
+            nb::arg("x"), nb::arg("y"))
+        .def(
+            "values",
+            [](const Spline& s, const In<T>& xs, const In<T>& ys, const Out<T>& out) {
+                require_same_size(xs.size(), ys, out);
+                const auto x = in_span(xs);
+                const auto y = in_span(ys);
+                const auto o = out_span(out);
+                nb::gil_scoped_release release;
+                s.values(x, y, o);
+            },
+            nb::arg("xs"), nb::arg("ys"), nb::arg("out"))
+        .def(
+            "gradients",
+            [](const Spline& s, const In<T>& xs, const In<T>& ys, const Out<T>& dx,
+               const Out<T>& dy) {
+                require_same_size(xs.size(), ys, dx, dy);
+                const auto x = in_span(xs);
+                const auto y = in_span(ys);
+                const auto gx = out_span(dx);
+                const auto gy = out_span(dy);
+                nb::gil_scoped_release release;
+                s.gradients(x, y, gx, gy);
+            },
+            nb::arg("xs"), nb::arg("ys"), nb::arg("dx"), nb::arg("dy"))
+        .def(
+            "values_and_gradients",
+            [](const Spline& s, const In<T>& xs, const In<T>& ys, const Out<T>& v,
+               const Out<T>& dx, const Out<T>& dy) {
+                require_same_size(xs.size(), ys, v, dx, dy);
+                const auto x = in_span(xs);
+                const auto y = in_span(ys);
+                const auto o = out_span(v);
+                const auto gx = out_span(dx);
+                const auto gy = out_span(dy);
+                nb::gil_scoped_release release;
+                s.values_and_gradients(x, y, o, gx, gy);
+            },
+            nb::arg("xs"), nb::arg("ys"), nb::arg("v"), nb::arg("dx"), nb::arg("dy"));
 }
 
 }  // namespace

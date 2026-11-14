@@ -78,3 +78,43 @@ class BSplineImage:
         """Return ``(value, dx, dy)`` at (x = column, y = row), bit-identical to
         ``value`` and ``gradient``."""
         return self._impl.value_and_gradient(x, y)
+
+    def _coords(self, xs, ys):
+        """Return flat contiguous coordinate arrays and the original shape."""
+        xs = np.asarray(xs, dtype=self._dtype)
+        ys = np.asarray(ys, dtype=self._dtype)
+        if xs.shape != ys.shape:
+            raise ValueError(f"xs and ys shapes differ: {xs.shape} vs {ys.shape}")
+        return (
+            np.ascontiguousarray(xs).ravel(),
+            np.ascontiguousarray(ys).ravel(),
+            xs.shape,
+        )
+
+    def values(self, xs, ys):
+        """Interpolated values at (xs = columns, ys = rows), any identical shape.
+
+        Returns an array of that shape and of ``dtype``; NaN where a
+        coordinate is non-finite.
+        """
+        fx, fy, shape = self._coords(xs, ys)
+        out = np.empty(fx.shape, dtype=self._dtype)
+        self._impl.values(fx, fy, out)
+        return out.reshape(shape)
+
+    def gradients(self, xs, ys):
+        """Return ``(dx, dy)`` arrays at (xs = columns, ys = rows)."""
+        fx, fy, shape = self._coords(xs, ys)
+        dx = np.empty(fx.shape, dtype=self._dtype)
+        dy = np.empty(fx.shape, dtype=self._dtype)
+        self._impl.gradients(fx, fy, dx, dy)
+        return dx.reshape(shape), dy.reshape(shape)
+
+    def values_and_gradients(self, xs, ys):
+        """Return ``(values, dx, dy)`` arrays at (xs = columns, ys = rows)."""
+        fx, fy, shape = self._coords(xs, ys)
+        v = np.empty(fx.shape, dtype=self._dtype)
+        dx = np.empty(fx.shape, dtype=self._dtype)
+        dy = np.empty(fx.shape, dtype=self._dtype)
+        self._impl.values_and_gradients(fx, fy, v, dx, dy)
+        return v.reshape(shape), dx.reshape(shape), dy.reshape(shape)
