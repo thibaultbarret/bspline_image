@@ -4,14 +4,14 @@
 PROJECT_NAME           = bspline_image
 PROJECT_NUMBER         = @PROJECT_VERSION@
 PROJECT_BRIEF          = "Header-only C++20 B-spline image interpolation"
-OUTPUT_DIRECTORY       = @CMAKE_BINARY_DIR@/docs
+OUTPUT_DIRECTORY       = "@CMAKE_BINARY_DIR@/docs"
 
-INPUT                  = @PROJECT_SOURCE_DIR@/include/bsi @PROJECT_SOURCE_DIR@/docs/guide
-USE_MDFILE_AS_MAINPAGE = @PROJECT_SOURCE_DIR@/docs/guide/index.md
+INPUT                  = "@PROJECT_SOURCE_DIR@/include/bsi" "@PROJECT_SOURCE_DIR@/docs/guide"
+USE_MDFILE_AS_MAINPAGE = "@PROJECT_SOURCE_DIR@/docs/guide/index.md"
 FILE_PATTERNS          = *.hpp *.md
 RECURSIVE              = YES
-STRIP_FROM_PATH        = @PROJECT_SOURCE_DIR@/include
-STRIP_FROM_INC_PATH    = @PROJECT_SOURCE_DIR@/include
+STRIP_FROM_PATH        = "@PROJECT_SOURCE_DIR@"
+STRIP_FROM_INC_PATH    = "@PROJECT_SOURCE_DIR@/include"
 EXCLUDE_SYMBOLS        = bsi::detail*
 PREDEFINED             = BSI_HOST_DEVICE=
 
