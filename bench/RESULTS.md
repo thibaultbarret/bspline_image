@@ -97,6 +97,6 @@ re-measured in the same run.
 
 Reading: for degree 5, the full value + gradient + Hessian costs about 1.4-1.6x
 `value_and_gradient` and about 2x `value` (117-128 ns/point). The facade pointwise call tracks
-the core within noise (+/-15 %, see the visit overhead check below); degrees 1 and 3 are noisy
+the core within noise (+/-15 %, see the visit overhead check above); degrees 1 and 3 are noisy
 at that level, e.g. the `+21 %` and `+25 %` visit cells are within the run-to-run spread seen
 above and are not a systematic effect.
