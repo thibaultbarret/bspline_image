@@ -15,6 +15,7 @@
 #include <type_traits>
 
 #include "bsi/config.hpp"
+#include "bsi/kernel/fma.hpp"
 
 namespace bsi {
 
@@ -221,10 +222,35 @@ BSI_HOST_DEVICE inline void cardinal_values(T t, int m, T* v) noexcept {
         // In place, descending j so that v[j-1] still holds the degree d-1 value.
         for (int j = d; j >= 1; --j) {
             const T s = t + T(j);
-            v[j] = (s * v[j] + (T(d + 1) - s) * v[j - 1]) / T(d);
+            v[j] = mul_add(s, v[j], (T(d + 1) - s) * v[j - 1]) / T(d);
         }
         v[0] = t * v[0] / T(d);
     }
+}
+
+/// @brief Cardinal values of degree `Degree`, built from those of degree `Degree - 1`.
+///
+/// Computes `lower[j] = M_Degree(t + j)` (`Degree` values) with `cardinal_values`, then the last
+/// recurrence step into `v[j] = M_{Degree+1}(t + j)` (`Degree + 1` values). Both `weights` and
+/// `weights_and_derivatives` use this single code path, so the weights are bit-identical
+/// between them even under floating-point contraction (FMA).
+///
+/// @tparam T      Floating-point scalar type.
+/// @tparam Degree Spline degree, >= 1.
+/// @param t Fractional position, \f$0 \le t < 1\f$.
+/// @param[out] lower Degree `Degree - 1` values, `Degree` entries.
+/// @param[out] v Degree `Degree` values, `Degree + 1` entries.
+template <class T, int Degree>
+BSI_HOST_DEVICE inline void cardinal_values_with_lower(T t, T* lower, T* v) noexcept {
+    static_assert(Degree >= 1, "cardinal_values_with_lower: Degree must be >= 1");
+    cardinal_values(t, Degree - 1, lower);
+    for (int j = Degree; j >= 1; --j) {
+        const T s = t + T(j);
+        const T below = lower[j - 1];
+        const T same = (j < Degree) ? lower[j] : T(0);
+        v[j] = mul_add(s, same, (T(Degree + 1) - s) * below) / T(Degree);
+    }
+    v[0] = t * lower[0] / T(Degree);
 }
 
 /// @brief Fractional position \f$t \in [0,1)\f$ such that \f$w_k = M_{n+1}(t + n - k)\f$.
@@ -255,7 +281,12 @@ BSI_HOST_DEVICE inline std::ptrdiff_t weights(T x, T* w) noexcept {
                   "weights: T must be floating point and 0 <= Degree <= max_degree");
     const T t = detail::fractional_position<T, Degree>(x);
     T v[Degree + 1];
-    detail::cardinal_values(t, Degree, v);
+    if constexpr (Degree == 0) {
+        v[0] = T(1);
+    } else {
+        T lower[Degree];
+        detail::cardinal_values_with_lower<T, Degree>(t, lower, v);
+    }
     for (int k = 0; k <= Degree; ++k) {
         w[k] = v[Degree - k];
     }
@@ -280,14 +311,19 @@ template <class T, int Degree>
 BSI_HOST_DEVICE inline std::ptrdiff_t weights_and_derivatives(T x, T* w, T* dw) noexcept {
     static_assert(detail::valid_basis_params<T, Degree>,
                   "weights_and_derivatives: T must be floating point and 0 <= Degree <= max_degree");
-    const std::ptrdiff_t i0 = weights<T, Degree>(x, w);
+    const std::ptrdiff_t i0 = first_index<T, Degree>(x);
+    const T t = detail::fractional_position<T, Degree>(x);
     if constexpr (Degree == 0) {
+        w[0] = T(1);
         dw[0] = T(0);
     } else {
         // lower[j] = M_n(t + j), j = 0..n-1 (degree n-1); out of range entries are 0.
-        const T t = detail::fractional_position<T, Degree>(x);
         T lower[Degree];
-        detail::cardinal_values(t, Degree - 1, lower);
+        T v[Degree + 1];
+        detail::cardinal_values_with_lower<T, Degree>(t, lower, v);
+        for (int k = 0; k <= Degree; ++k) {
+            w[k] = v[Degree - k];
+        }
         for (int k = 0; k <= Degree; ++k) {
             const int j = Degree - k;
             const T hi = (j < Degree) ? lower[j] : T(0);

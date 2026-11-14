@@ -16,6 +16,7 @@
 
 #include "bsi/config.hpp"
 #include "bsi/kernel/basis.hpp"
+#include "bsi/kernel/fma.hpp"
 #include "bsi/kernel/mirror.hpp"
 #include "bsi/types.hpp"
 
@@ -31,12 +32,12 @@ inline constexpr std::ptrdiff_t required_pad = Degree / 2 + 1;
 
 namespace detail {
 
-/// @brief A quiet NaN of type `T`, built from the `NAN` macro of `<cmath>` only.
+/// @brief A quiet NaN of type `T`, built with `std::nan` of `<cmath>` only.
 /// @tparam T Floating-point scalar type.
 /// @return A NaN value.
 template <class T>
 BSI_HOST_DEVICE inline T make_nan() noexcept {
-    return static_cast<T>(NAN);
+    return static_cast<T>(std::nan(""));
 }
 
 /// @brief Row sum \f$\sum_k a_k\, c(i_0 + k, j)\f$ over the x window.
@@ -53,9 +54,28 @@ BSI_HOST_DEVICE inline T row_sum(CoeffView<const T> c, std::ptrdiff_t i0, std::p
     const T* row = &c.at(i0, j);
     T s = a[0] * row[0];
     for (int k = 1; k <= Degree; ++k) {
-        s += a[k] * row[k];
+        s = mul_add(a[k], row[k], s);
     }
     return s;
+}
+
+/// @brief Fold a coordinate into \f$[0, n-1]\f$, skipping the floating-point fold when it is
+///        already inside.
+///
+/// For \f$0 \le x \le n-1\f$ the fold is the identity with orientation \f$+1\f$ (this
+/// includes `-0.0`, which folds to `+0.0` with the same weights), so `x` is returned as is.
+/// Any other value (including NaN) goes through `fold_mirror`.
+/// @tparam T Floating-point scalar type.
+/// @param x Coordinate of any value.
+/// @param n Number of samples.
+/// @return Same result as `fold_mirror(x, n)` up to the sign of a zero.
+/// @pre \f$n \ge 1\f$.
+template <class T>
+BSI_HOST_DEVICE inline Folded<T> fold_fast(T x, std::ptrdiff_t n) noexcept {
+    if (x >= T(0) && x <= static_cast<T>(n - 1)) {
+        return Folded<T>{x, T(1)};
+    }
+    return fold_mirror(x, n);
 }
 
 }  // namespace detail
@@ -78,18 +98,21 @@ BSI_HOST_DEVICE inline T evaluate(CoeffView<const T> c, T x, T y) noexcept {
     if (!std::isfinite(x) || !std::isfinite(y)) {
         return detail::make_nan<T>();
     }
-    const Folded<T> fx = fold_mirror(x, c.width);
-    const Folded<T> fy = fold_mirror(y, c.height);
+    const Folded<T> fx = detail::fold_fast(x, c.width);
+    const Folded<T> fy = detail::fold_fast(y, c.height);
 
     T wx[Degree + 1];
     T wy[Degree + 1];
     const std::ptrdiff_t i0 = weights<T, Degree>(fx.x, wx);
     const std::ptrdiff_t j0 = weights<T, Degree>(fy.x, wy);
 
-    // value = sum_l wy[l] * r_l with r_l = sum_k wx[k] * c(i0 + k, j0 + l)
-    T value = wy[0] * detail::row_sum<T, Degree>(c, i0, j0, wx);
-    for (int l = 1; l <= Degree; ++l) {
-        value += wy[l] * detail::row_sum<T, Degree>(c, i0, j0 + l, wx);
+    // value = sum_l wy[l] * r_l with r_l = sum_k wx[k] * c(i0 + k, j0 + l).
+    // Same initialisation and loop shape as evaluate_with_gradient, so that floating-point
+    // contraction (FMA) treats both identically and the values stay bit-identical.
+    T value = T(0);
+    for (int l = 0; l <= Degree; ++l) {
+        const T r = detail::row_sum<T, Degree>(c, i0, j0 + l, wx);
+        value = detail::mul_add(wy[l], r, value);
     }
     return value;
 }
@@ -121,8 +144,8 @@ BSI_HOST_DEVICE inline ValueAndGradient<T> evaluate_with_gradient(CoeffView<cons
         const T nan = detail::make_nan<T>();
         return ValueAndGradient<T>{nan, nan, nan};
     }
-    const Folded<T> fx = fold_mirror(x, c.width);
-    const Folded<T> fy = fold_mirror(y, c.height);
+    const Folded<T> fx = detail::fold_fast(x, c.width);
+    const Folded<T> fy = detail::fold_fast(y, c.height);
 
     T wx[Degree + 1];
     T dwx[Degree + 1];
@@ -137,9 +160,9 @@ BSI_HOST_DEVICE inline ValueAndGradient<T> evaluate_with_gradient(CoeffView<cons
     for (int l = 0; l <= Degree; ++l) {
         const T r = detail::row_sum<T, Degree>(c, i0, j0 + l, wx);
         const T r_dx = detail::row_sum<T, Degree>(c, i0, j0 + l, dwx);
-        value += wy[l] * r;
-        sum_dy += dwy[l] * r;
-        sum_dx += wy[l] * r_dx;
+        value = detail::mul_add(wy[l], r, value);
+        sum_dy = detail::mul_add(dwy[l], r, sum_dy);
+        sum_dx = detail::mul_add(wy[l], r_dx, sum_dx);
     }
     return ValueAndGradient<T>{value, fx.sign * sum_dx, fy.sign * sum_dy};
 }
