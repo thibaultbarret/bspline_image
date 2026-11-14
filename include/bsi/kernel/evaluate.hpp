@@ -167,4 +167,74 @@ BSI_HOST_DEVICE inline ValueAndGradient<T> evaluate_with_gradient(CoeffView<cons
     return ValueAndGradient<T>{value, fx.sign * sum_dx, fy.sign * sum_dy};
 }
 
+/// @brief Evaluate the interpolated value, gradient and Hessian at \f$(x, y)\f$.
+///
+/// Extends `evaluate_with_gradient` with the second derivatives. With \f$r_l\f$, \f$r'_l\f$
+/// and \f$r''_l\f$ the row sums of the weights and of their first and second derivatives
+/// along x: \f$\partial_{yy} f = \sum_l ddw^y_l r_l\f$,
+/// \f$\partial_{xy} f = s_x s_y \sum_l dw^y_l r'_l\f$ and
+/// \f$\partial_{xx} f = \sum_l w^y_l r''_l\f$, where \f$s_x, s_y = \pm 1\f$ are the fold
+/// orientations (second derivatives along one axis are even under the mirror fold). The
+/// returned `value`, `dx` and `dy` are bit-identical to `evaluate_with_gradient`.
+///
+/// For degrees 0 to 2 the Hessian is exact for the piecewise representation: 0 for degrees 0
+/// and 1, piecewise constant for degree 2 (right derivative at the knots). Degrees >= 3 give
+/// a continuous Hessian.
+///
+/// Non-finite coordinates give NaN for all six outputs.
+///
+/// @tparam T      Floating-point scalar type.
+/// @tparam Degree Spline degree \f$n\f$.
+/// @param c Coefficients (output of the prefilter), mirror padding filled.
+/// @param x Column coordinate.
+/// @param y Row coordinate.
+/// @return `{value, dx, dy, dxx, dxy, dyy}`; all NaN if `x` or `y` is not finite.
+/// @pre `c.pad >= required_pad<Degree>`, padding filled by `fill_mirror_padding`,
+///      `c.width >= 1`, `c.height >= 1`.
+template <class T, int Degree>
+BSI_HOST_DEVICE inline ValueGradientHessian<T> evaluate_with_hessian(CoeffView<const T> c, T x,
+                                                                     T y) noexcept {
+    static_assert(std::is_floating_point_v<T>,
+                  "evaluate_with_hessian: T must be floating point");
+    if (!std::isfinite(x) || !std::isfinite(y)) {
+        const T nan = detail::make_nan<T>();
+        return ValueGradientHessian<T>{nan, nan, nan, nan, nan, nan};
+    }
+    const Folded<T> fx = detail::fold_fast(x, c.width);
+    const Folded<T> fy = detail::fold_fast(y, c.height);
+
+    T wx[Degree + 1];
+    T dwx[Degree + 1];
+    T ddwx[Degree + 1];
+    T wy[Degree + 1];
+    T dwy[Degree + 1];
+    T ddwy[Degree + 1];
+    const std::ptrdiff_t i0 = weights_and_second_derivatives<T, Degree>(fx.x, wx, dwx, ddwx);
+    const std::ptrdiff_t j0 = weights_and_second_derivatives<T, Degree>(fy.x, wy, dwy, ddwy);
+
+    T value = T(0);
+    T sum_dy = T(0);
+    T sum_dx = T(0);
+    T sum_dyy = T(0);
+    T sum_dxy = T(0);
+    T sum_dxx = T(0);
+    for (int l = 0; l <= Degree; ++l) {
+        const T r = detail::row_sum<T, Degree>(c, i0, j0 + l, wx);
+        const T r_dx = detail::row_sum<T, Degree>(c, i0, j0 + l, dwx);
+        const T r_dxx = detail::row_sum<T, Degree>(c, i0, j0 + l, ddwx);
+        value = detail::mul_add(wy[l], r, value);
+        sum_dy = detail::mul_add(dwy[l], r, sum_dy);
+        sum_dx = detail::mul_add(wy[l], r_dx, sum_dx);
+        sum_dyy = detail::mul_add(ddwy[l], r, sum_dyy);
+        sum_dxy = detail::mul_add(dwy[l], r_dx, sum_dxy);
+        sum_dxx = detail::mul_add(wy[l], r_dxx, sum_dxx);
+    }
+    return ValueGradientHessian<T>{value,
+                                   fx.sign * sum_dx,
+                                   fy.sign * sum_dy,
+                                   sum_dxx,
+                                   fx.sign * fy.sign * sum_dxy,
+                                   sum_dyy};
+}
+
 }  // namespace bsi

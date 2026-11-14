@@ -86,4 +86,25 @@ struct ValueAndGradient {
     T dy;      ///< Partial derivative along y.
 };
 
+/// @brief Second partial derivatives (symmetric Hessian) of the interpolated function.
+/// @tparam T Scalar type.
+template <class T>
+struct Hessian {
+    T dxx;  ///< Second partial derivative along x.
+    T dxy;  ///< Mixed second partial derivative.
+    T dyy;  ///< Second partial derivative along y.
+};
+
+/// @brief Interpolated value together with its spatial gradient and Hessian.
+/// @tparam T Scalar type.
+template <class T>
+struct ValueGradientHessian {
+    T value;  ///< Interpolated value.
+    T dx;     ///< Partial derivative along x.
+    T dy;     ///< Partial derivative along y.
+    T dxx;    ///< Second partial derivative along x.
+    T dxy;    ///< Mixed second partial derivative.
+    T dyy;    ///< Second partial derivative along y.
+};
+
 }  // namespace bsi

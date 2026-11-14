@@ -147,4 +147,117 @@ TYPED_TEST(Evaluate, FloatPathMatchesDouble) {
     }
 }
 
+TYPED_TEST(Evaluate, ValueAndGradientOfHessianBitIdentical) {
+    constexpr int D = TestFixture::D;
+    PaddedCoefficients<double, D> c(20, 15, smooth_pixel);
+    for (int p = 0; p < 50; ++p) {
+        const double x = -3.1 + 0.53 * p;
+        const double y = -2.7 + 0.41 * p;
+        const auto g = bsi::evaluate_with_gradient<double, D>(c.view, x, y);
+        const auto h = bsi::evaluate_with_hessian<double, D>(c.view, x, y);
+        EXPECT_EQ(h.value, g.value) << "p=" << p;
+        EXPECT_EQ(h.dx, g.dx) << "p=" << p;
+        EXPECT_EQ(h.dy, g.dy) << "p=" << p;
+    }
+}
+
+TYPED_TEST(Evaluate, HessianMatchesFiniteDifferencesOfGradient) {
+    constexpr int D = TestFixture::D;
+    if constexpr (D < 3) {
+        GTEST_SKIP() << "Hessian is piecewise constant or zero for degree < 3";
+    } else {
+        constexpr double h = 1e-5;
+        PaddedCoefficients<double, D> c(20, 15, smooth_pixel);
+        const auto grad = [&](double x, double y) {
+            return bsi::evaluate_with_gradient<double, D>(c.view, x, y);
+        };
+        const double pts[][2] = {{3.37, 4.21}, {9.71, 7.43}, {15.13, 2.67}, {-1.37, 3.29},
+                                 {21.43, 16.71}, {6.29, -2.37}, {5.61, 18.13}};
+        for (const auto& pt : pts) {
+            const double x = pt[0];
+            const double y = pt[1];
+            const auto r = bsi::evaluate_with_hessian<double, D>(c.view, x, y);
+            const double fd_xx = (grad(x + h, y).dx - grad(x - h, y).dx) / (2 * h);
+            const double fd_yy = (grad(x, y + h).dy - grad(x, y - h).dy) / (2 * h);
+            const double fd_xy_a = (grad(x, y + h).dx - grad(x, y - h).dx) / (2 * h);
+            const double fd_xy_b = (grad(x + h, y).dy - grad(x - h, y).dy) / (2 * h);
+            EXPECT_NEAR(r.dxx, fd_xx, 1e-6) << "x=" << x << " y=" << y;
+            EXPECT_NEAR(r.dyy, fd_yy, 1e-6) << "x=" << x << " y=" << y;
+            EXPECT_NEAR(r.dxy, fd_xy_a, 1e-6) << "x=" << x << " y=" << y;
+            EXPECT_NEAR(r.dxy, fd_xy_b, 1e-6) << "x=" << x << " y=" << y;
+        }
+    }
+}
+
+TYPED_TEST(Evaluate, HessianMirrorSymmetry) {
+    constexpr int D = TestFixture::D;
+    PaddedCoefficients<double, D> c(16, 10, smooth_pixel);
+    for (double x = 0.13; x < 14.0; x += 0.91) {
+        const auto a = bsi::evaluate_with_hessian<double, D>(c.view, x, 4.2);
+        const auto b = bsi::evaluate_with_hessian<double, D>(c.view, -x, 4.2);
+        EXPECT_NEAR(b.dxx, a.dxx, 1e-12) << "x=" << x;
+        EXPECT_NEAR(b.dyy, a.dyy, 1e-12) << "x=" << x;
+        EXPECT_NEAR(b.dxy, -a.dxy, 1e-12) << "x=" << x;
+    }
+    for (double y = 0.13; y < 8.0; y += 0.77) {
+        const auto a = bsi::evaluate_with_hessian<double, D>(c.view, 3.9, y);
+        const auto b = bsi::evaluate_with_hessian<double, D>(c.view, 3.9, -y);
+        EXPECT_NEAR(b.dxx, a.dxx, 1e-12) << "y=" << y;
+        EXPECT_NEAR(b.dyy, a.dyy, 1e-12) << "y=" << y;
+        EXPECT_NEAR(b.dxy, -a.dxy, 1e-12) << "y=" << y;
+    }
+}
+
+TYPED_TEST(Evaluate, HessianContinuousAcrossKnots) {
+    constexpr int D = TestFixture::D;
+    if constexpr (D < 3) {
+        GTEST_SKIP() << "Hessian is discontinuous or zero for degree < 3";
+    } else {
+        constexpr double eps = 1e-7;
+        PaddedCoefficients<double, D> c(16, 12, smooth_pixel);
+        // Knots are at integers for odd degrees and at half-integers for even degrees.
+        for (const double knot : {2.0, 2.5}) {
+            const auto lo = bsi::evaluate_with_hessian<double, D>(c.view, knot - eps, 4.3);
+            const auto hi = bsi::evaluate_with_hessian<double, D>(c.view, knot + eps, 4.3);
+            EXPECT_NEAR(lo.dxx, hi.dxx, 1e-5) << "knot=" << knot;
+            EXPECT_NEAR(lo.dxy, hi.dxy, 1e-5) << "knot=" << knot;
+            EXPECT_NEAR(lo.dyy, hi.dyy, 1e-5) << "knot=" << knot;
+        }
+    }
+}
+
+TYPED_TEST(Evaluate, HessianNonFiniteGivesNaN) {
+    constexpr int D = TestFixture::D;
+    PaddedCoefficients<double, D> c(8, 8, smooth_pixel);
+    for (const double bad : {kNaN, kInf, -kInf}) {
+        const auto rx = bsi::evaluate_with_hessian<double, D>(c.view, bad, 2.5);
+        const auto ry = bsi::evaluate_with_hessian<double, D>(c.view, 2.5, bad);
+        for (const auto& r : {rx, ry}) {
+            EXPECT_TRUE(std::isnan(r.value));
+            EXPECT_TRUE(std::isnan(r.dx));
+            EXPECT_TRUE(std::isnan(r.dy));
+            EXPECT_TRUE(std::isnan(r.dxx));
+            EXPECT_TRUE(std::isnan(r.dxy));
+            EXPECT_TRUE(std::isnan(r.dyy));
+        }
+    }
+}
+
+TYPED_TEST(Evaluate, ConstantAndLinearHaveZeroHessian) {
+    constexpr int D = TestFixture::D;
+    PaddedCoefficients<double, D> constant(
+        32, 16, [](std::ptrdiff_t, std::ptrdiff_t) { return 3.0; });
+    PaddedCoefficients<double, D> linear(
+        32, 16, [](std::ptrdiff_t i, std::ptrdiff_t) { return static_cast<double>(i); });
+    for (double x = 8.0; x <= 24.0; x += 0.37) {
+        for (const auto* c : {&constant.view, &linear.view}) {
+            const auto r = bsi::evaluate_with_hessian<double, D>(
+                bsi::CoeffView<const double>(*c), x, 6.3);
+            EXPECT_NEAR(r.dxx, 0.0, 1e-12) << "x=" << x;
+            EXPECT_NEAR(r.dxy, 0.0, 1e-12) << "x=" << x;
+            EXPECT_NEAR(r.dyy, 0.0, 1e-12) << "x=" << x;
+        }
+    }
+}
+
 }  // namespace
