@@ -23,7 +23,7 @@ With `FetchContent`:
 
 ```cmake
 include(FetchContent)
-FetchContent_Declare(bspline_image GIT_REPOSITORY <url-of-the-repository> GIT_TAG main)
+FetchContent_Declare(bspline_image GIT_REPOSITORY https://github.com/OWNER/REPO.git GIT_TAG main)
 FetchContent_MakeAvailable(bspline_image)
 target_link_libraries(my_app PRIVATE bsi::bspline_image)
 ```
