@@ -58,6 +58,32 @@ Pixel (i, j) sits at coordinate (x = i, y = j). Supported pixel types are `std::
 `bsi::AnyBSplineImage<T>(view, degree)`; in hot loops, dispatch once with its `visit()`
 method.
 
+## Python
+
+Python bindings (nanobind) are available for local use. The module is not published on
+PyPI; install it from a checkout, preferably in a virtual environment (needs a C++20
+compiler and CMake):
+
+```sh
+python3 -m venv .venv && .venv/bin/pip install .
+```
+
+```python
+import numpy as np
+import bspline_image as bsi
+
+img = np.random.default_rng(0).uniform(0, 255, (64, 48))   # shape (height, width)
+spline = bsi.BSplineImage(img, degree=3)                   # prefiltered once
+print(spline.value(10.25, 20.75))                          # x = column, y = row
+values, dx, dy = spline.values_and_gradients(np.array([1.5, 2.5]), np.array([3.5, 4.5]))
+```
+
+Images are indexed `img[y, x]`: x is the column and y the row, so pixel `img[y, x]` sits at
+coordinate (x, y). Batch methods take `xs` and `ys` arrays of identical shape. Values match
+SciPy: `s.values(xs, ys)` equals
+`scipy.ndimage.map_coordinates(img, [ys, xs], order=degree, mode='mirror')` for degrees 0
+to 5.
+
 ## Degrees
 
 | Degree | Interpolant | Prefilter | Poles | Support (samples) |

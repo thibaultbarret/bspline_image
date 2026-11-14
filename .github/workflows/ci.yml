@@ -138,3 +138,18 @@ jobs:
           exe=$(find build-consumer -type f \( -name consumer -o -name consumer.exe \) | head -n 1)
           echo "Running $exe"
           "$exe"
+
+  python:
+    name: python bindings
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: pip install numpy pytest scipy
+      - name: Build and install the module
+        run: pip install .
+      - name: Test
+        run: python -m pytest python/tests -q
