@@ -76,7 +76,7 @@ TYPED_TEST(Basis, DerivativesMatchFiniteDifferences) {
             EXPECT_NEAR(w[k], (bsi::bspline<double, D>(u)), 1e-14);
             sum_w += w[k];
             sum_dw += dw[k];
-            if (D >= 2) {
+            if constexpr (D >= 2) {
                 const double fd =
                     (bsi::bspline<double, D>(u + h) - bsi::bspline<double, D>(u - h)) / (2.0 * h);
                 EXPECT_NEAR(dw[k], fd, 1e-6) << "x=" << x << " k=" << k;
