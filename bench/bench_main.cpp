@@ -107,11 +107,29 @@ void bench_row(const std::vector<float>& image) {
             return static_cast<double>(acc);
         });
     });
+    const double facade_vg_point = time_ns_per_point([&] {
+        T acc{};
+        for (std::size_t k = 0; k < kPointCount; ++k) {
+            const auto r = any.value_and_gradient(pts.xs[k], pts.ys[k]);
+            acc += r.value + r.dx + r.dy;
+        }
+        return static_cast<double>(acc);
+    });
+    const double facade_vg_visit = time_ns_per_point([&] {
+        return any.visit([&](const auto& spline) {
+            T acc{};
+            for (std::size_t k = 0; k < kPointCount; ++k) {
+                const auto r = spline.value_and_gradient(pts.xs[k], pts.ys[k]);
+                acc += r.value + r.dx + r.dy;
+            }
+            return static_cast<double>(acc);
+        });
+    });
 
     const double overhead = 100.0 * (facade_visit - core_value) / core_value;
-    std::printf("| %d | %s | %.2f | %.2f | %.2f | %.2f | %+.1f%% |\n", Degree,
-                sizeof(T) == sizeof(float) ? "float" : "double", core_value, core_vg,
-                facade_point, facade_visit, overhead);
+    std::printf("| %d | %s | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f | %+.1f%% |\n",
+                Degree, sizeof(T) == sizeof(float) ? "float" : "double", core_value, core_vg,
+                facade_point, facade_vg_point, facade_visit, facade_vg_visit, overhead);
 }
 
 template <int Degree>
@@ -128,8 +146,9 @@ int main() {
                 static_cast<long long>(kImageSize), static_cast<long long>(kImageSize),
                 kPointCount, kRepetitions);
     std::puts("| degree | type | core value | core value_and_gradient | facade value | "
-              "facade + visit value | visit vs core value |");
-    std::puts("|---|---|---|---|---|---|---|");
+              "facade value_and_gradient | facade + visit value | "
+              "facade + visit value_and_gradient | visit vs core value |");
+    std::puts("|---|---|---|---|---|---|---|---|---|");
     bench_degree<1>(image);
     bench_degree<3>(image);
     bench_degree<5>(image);
