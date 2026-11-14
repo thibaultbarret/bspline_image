@@ -160,3 +160,16 @@ TEST(AnyBSplineImage, FloatFacadeCallsEveryMethod) {
     EXPECT_TRUE(bit_equal(dy[9], core.gradient(xs[9], ys[9]).dy));
     EXPECT_EQ(any.visit([](const auto& s) { return s.width(); }), kW);
 }
+
+TEST(MutableView, ConstructsFromMutableImageView) {
+    std::vector<float> img(static_cast<std::size_t>(kW * kH));
+    for (std::size_t k = 0; k < img.size(); ++k) img[k] = static_cast<float>(k % 11);
+    const bsi::ImageView<float> mutable_view{img.data(), kW, kH, kW};
+    const bsi::ImageView<const float> const_view{img.data(), kW, kH, kW};
+    const bsi::BSplineImage<double, 3> a(mutable_view);
+    const bsi::BSplineImage<double, 3> b(const_view);
+    const bsi::AnyBSplineImage<double> any_a(mutable_view, 3);
+    const bsi::AnyBSplineImage<double> any_b(const_view, 3);
+    EXPECT_TRUE(bit_equal(a.value(4.3, 5.7), b.value(4.3, 5.7)));
+    EXPECT_TRUE(bit_equal(any_a.value(4.3, 5.7), any_b.value(4.3, 5.7)));
+}

@@ -36,3 +36,15 @@ TEST(Types, CoeffViewConvertsToConstView) {
 }
 
 TEST(Types, MaxDegreeIsSeven) { EXPECT_EQ(bsi::max_degree, 7); }
+
+TEST(Types, ImageViewConvertsToConstView) {
+    float buf[6] = {1, 2, 3, 4, 5, 6};
+    bsi::ImageView<float> mutable_view{buf, 3, 2, 3};
+    bsi::ImageView<const float> const_view = mutable_view;
+    EXPECT_EQ(const_view.data, buf);
+    EXPECT_EQ(const_view.width, 3);
+    EXPECT_EQ(const_view.height, 2);
+    EXPECT_EQ(const_view.stride, 3);
+    static_assert(std::is_convertible_v<bsi::ImageView<float>, bsi::ImageView<const float>>);
+    static_assert(!std::is_convertible_v<bsi::ImageView<const float>, bsi::ImageView<float>>);
+}

@@ -28,6 +28,14 @@ struct ImageView {
     BSI_HOST_DEVICE constexpr P& at(std::ptrdiff_t x, std::ptrdiff_t y) const noexcept {
         return data[y * stride + x];
     }
+
+    /// @brief Implicit conversion of a mutable view to a read-only view.
+    /// @return An `ImageView<const U>` aliasing the same pixels.
+    /// @note Only participates when `P` is not already const.
+    template <class U = P, class = std::enable_if_t<!std::is_const_v<U>>>
+    BSI_HOST_DEVICE constexpr operator ImageView<const U>() const noexcept {
+        return ImageView<const U>{data, width, height, stride};
+    }
 };
 
 /// @brief Non-owning view of a padded B-spline coefficient array.

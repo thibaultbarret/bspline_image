@@ -84,6 +84,15 @@ public:
     AnyBSplineImage(ImageView<const P> pixels, int degree)
         : impl_(detail::make_impl<T>(pixels, degree)) {}
 
+    /// @brief Build the interpolator from a mutable image view, with the given degree.
+    /// @tparam P Pixel type (`uint8_t`, `uint16_t`, `float` or `double`).
+    /// @param pixels Input image; it is copied.
+    /// @param degree Spline degree, in [0, `max_degree`].
+    /// @throws std::invalid_argument As for the read-only overload.
+    template <Pixel P>
+    AnyBSplineImage(ImageView<P> pixels, int degree)
+        : AnyBSplineImage(ImageView<const P>(pixels), degree) {}
+
     /// @brief Spline degree chosen at construction.
     /// @return Degree in [0, `max_degree`].
     int degree() const noexcept { return static_cast<int>(impl_.index()); }

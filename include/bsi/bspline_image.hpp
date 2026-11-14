@@ -63,6 +63,16 @@ public:
         build(pixels);
     }
 
+    /// @brief Build the interpolator from a mutable image view.
+    ///
+    /// Same as the read-only overload; template deduction cannot apply the implicit
+    /// `ImageView<P>` to `ImageView<const P>` conversion, hence this forwarding overload.
+    /// @tparam P Pixel type (`uint8_t`, `uint16_t`, `float` or `double`).
+    /// @param pixels Input image; it is copied.
+    /// @throws std::invalid_argument As for the read-only overload.
+    template <Pixel P>
+    explicit BSplineImage(ImageView<P> pixels) : BSplineImage(ImageView<const P>(pixels)) {}
+
     /// @brief Image width in pixels.
     /// @return Number of columns.
     std::ptrdiff_t width() const noexcept { return width_; }
