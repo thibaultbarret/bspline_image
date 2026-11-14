@@ -103,9 +103,9 @@ jobs:
       - name: Capture coverage
         run: |
           lcov --capture --directory build --output-file cov.info \
-            --gcov-tool gcov-14 --ignore-errors mismatch
+            --gcov-tool gcov-14 --ignore-errors mismatch,inconsistent,negative,gcov
           lcov --remove cov.info '*/tests/*' '*/_deps/*' '/usr/*' '*/examples/*' '*/bench/*' \
-            --output-file cov.info --ignore-errors unused
+            --output-file cov.info --ignore-errors unused,inconsistent
       - name: Check threshold
         run: tools/check_coverage.sh cov.info 80
 
@@ -126,9 +126,11 @@ jobs:
           cmake -S . -B build
           -DBSI_BUILD_TESTS=OFF -DBSI_BUILD_EXAMPLES=OFF -DBSI_BUILD_BENCH=OFF
       - name: Install
-        run: cmake --install build --prefix _install
+        run: cmake --install build --prefix "${{ github.workspace }}/_install"
       - name: Configure consumer
-        run: cmake -S tests/install_consumer -B build-consumer -DCMAKE_PREFIX_PATH="$PWD/_install"
+        run: >
+          cmake -S tests/install_consumer -B build-consumer
+          -DCMAKE_PREFIX_PATH="${{ github.workspace }}/_install"
       - name: Build consumer
         run: cmake --build build-consumer --config Release
       - name: Run consumer

@@ -11,7 +11,18 @@ fi
 info_file=$1
 threshold=$2
 
-summary=$(lcov --summary "$info_file" 2>&1)
+case "$threshold" in
+  ''|*[!0-9.]*|*.*.*|.)
+    echo "error: threshold must be a number, got '${threshold}'" >&2
+    exit 2
+    ;;
+esac
+
+if ! summary=$(lcov --summary "$info_file" 2>&1); then
+  printf '%s\n' "$summary" >&2
+  echo "error: lcov --summary failed" >&2
+  exit 1
+fi
 echo "$summary"
 
 percent=$(printf '%s\n' "$summary" \
