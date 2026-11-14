@@ -119,3 +119,48 @@ def test_broadcast_zero_row_stride():
     for j in range(6):
         for i in range(10):
             assert abs(s.value(i, j) - row[i]) < 1e-9
+
+
+@pytest.mark.parametrize(
+    "make",
+    [
+        lambda row: row[None, :],
+        lambda row: np.atleast_2d(row),
+        lambda row: row[:, None],
+    ],
+    ids=["row_none", "atleast_2d", "col_none"],
+)
+def test_zero_stride_single_row_or_column(make):
+    row = np.linspace(1.0, 9.0, 6)
+    img = make(row)
+    s = bsi.BSplineImage(img)
+    for j in range(img.shape[0]):
+        for i in range(img.shape[1]):
+            assert s.value(i, j) == pytest.approx(img[j, i], abs=1e-9)
+
+
+@pytest.mark.parametrize("bad", [3.0, None, True, 8, -1, "3"])
+def test_invalid_degree_message(bad):
+    with pytest.raises(ValueError, match="degree"):
+        bsi.BSplineImage(smooth(5, 5), degree=bad)
+
+
+def test_unaligned_image_is_copied():
+    h, w = 5, 6
+    ref = smooth(h, w)
+    buf = bytearray(1 + ref.nbytes)
+    buf[1:] = ref.tobytes()
+    img = np.frombuffer(buf, dtype=np.float64, offset=1, count=h * w).reshape(h, w)
+    assert not img.flags.aligned
+    a = bsi.BSplineImage(img)
+    b = bsi.BSplineImage(ref)
+    assert a.value(2.3, 1.7) == b.value(2.3, 1.7)
+
+
+def test_core_rejects_wrong_output_dtype():
+    from bspline_image import _core
+
+    core = _core.Spline64(smooth(5, 5), 3)
+    xs = np.zeros(4)
+    with pytest.raises(TypeError):
+        core.values(xs, xs, np.empty(4, np.float32))

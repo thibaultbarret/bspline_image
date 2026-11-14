@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """B-spline image interpolation for sub-pixel grey-level values and gradients."""
 
+import operator
 from typing import Tuple
 
 import numpy as np
@@ -17,6 +18,19 @@ _NATIVE_PIXEL_DTYPES = tuple(
 )
 
 
+def _check_degree(degree: object) -> int:
+    message = f"degree must be an integer in [0, 7], got {degree!r}"
+    if isinstance(degree, (bool, np.bool_)):
+        raise ValueError(message)
+    try:
+        value = operator.index(degree)  # type: ignore[call-overload]
+    except TypeError:
+        raise ValueError(message) from None
+    if not 0 <= value <= 7:
+        raise ValueError(message)
+    return value
+
+
 def _normalise_image(img: npt.ArrayLike) -> np.ndarray:
     """Return a 2D array the core accepts: native supported dtype, unit column stride."""
     img = np.asarray(img)
@@ -26,8 +40,15 @@ def _normalise_image(img: npt.ArrayLike) -> np.ndarray:
         raise ValueError("image must not be empty")
     if img.dtype not in _NATIVE_PIXEL_DTYPES or not img.dtype.isnative:
         img = img.astype(np.float64)
-    if img.strides[1] != img.itemsize or img.strides[0] < img.shape[1] * img.itemsize:
-        img = np.ascontiguousarray(img)
+    if (
+        img.strides[1] != img.itemsize
+        or img.strides[0] < img.shape[1] * img.itemsize
+        or img.strides[0] % img.itemsize != 0
+        or not img.flags.aligned
+    ):
+        # np.array(order="C") always yields normal strides, unlike
+        # ascontiguousarray which keeps zero strides of broadcast views.
+        img = np.array(img, order="C", copy=True)
     return img
 
 
@@ -40,7 +61,9 @@ class BSplineImage:
         img: 2D array-like. uint8, uint16, float32 and float64 (native byte
             order) are used as is; any other dtype is converted to float64.
         degree: spline degree, 0 to 7 (``ValueError`` otherwise).
-        dtype: coefficient/evaluation precision, float64 or float32.
+        dtype: coefficient/evaluation precision, float64 or float32. With
+            float32 the coordinates are also rounded to float32 (precision
+            about 1e-3 px around x = 4000); use float64 for large images.
     """
 
     def __init__(
@@ -49,6 +72,7 @@ class BSplineImage:
         degree: int = 3,
         dtype: npt.DTypeLike = np.float64,
     ) -> None:
+        degree = _check_degree(degree)
         self._dtype = np.dtype(dtype)
         if self._dtype == np.float64:
             cls = _core.Spline64
