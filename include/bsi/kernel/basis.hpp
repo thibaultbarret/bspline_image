@@ -109,9 +109,8 @@ BSI_HOST_DEVICE inline T bspline(T x) noexcept {
             }
             if (a < T(2)) {
                 return T(17) / T(40) +
-                       a * (T(5) / T(8) +
-                            a * (T(-7) / T(4) +
-                                 a * (T(5) / T(4) + a * (T(-3) / T(8) + a / T(24)))));
+                       a * (T(5) / T(8) + a * (T(-7) / T(4) +
+                                               a * (T(5) / T(4) + a * (T(-3) / T(8) + a / T(24)))));
             }
             if (a < T(3)) {
                 const T d = T(3) - a;
@@ -157,8 +156,8 @@ BSI_HOST_DEVICE inline T bspline(T x) noexcept {
                        a * (T(-7) / T(90) +
                             a * (T(-1) / T(10) +
                                  a * (T(-7) / T(18) +
-                                      a * (T(1) / T(2) +
-                                           a * (T(-7) / T(30) + a * (T(1) / T(20) - a / T(240)))))));
+                                      a * (T(1) / T(2) + a * (T(-7) / T(30) +
+                                                              a * (T(1) / T(20) - a / T(240)))))));
             }
             if (a < T(3)) {
                 return T(-139) / T(630) +
@@ -166,7 +165,8 @@ BSI_HOST_DEVICE inline T bspline(T x) noexcept {
                             a * (T(-23) / T(6) +
                                  a * (T(49) / T(18) +
                                       a * (T(-19) / T(18) +
-                                           a * (T(7) / T(30) + a * (T(-1) / T(36) + a / T(720)))))));
+                                           a * (T(7) / T(30) +
+                                                a * (T(-1) / T(36) + a / T(720)))))));
             }
             if (a < T(4)) {
                 const T d = T(4) - a;
@@ -279,8 +279,9 @@ BSI_HOST_DEVICE inline std::ptrdiff_t weights(T x, T* w) noexcept {
 /// @return \f$i_0\f$ = `first_index<T, Degree>(x)`.
 template <class T, int Degree>
 BSI_HOST_DEVICE inline std::ptrdiff_t weights_and_derivatives(T x, T* w, T* dw) noexcept {
-    static_assert(detail::valid_basis_params<T, Degree>,
-                  "weights_and_derivatives: T must be floating point and 0 <= Degree <= max_degree");
+    static_assert(
+        detail::valid_basis_params<T, Degree>,
+        "weights_and_derivatives: T must be floating point and 0 <= Degree <= max_degree");
     const std::ptrdiff_t i0 = weights<T, Degree>(x, w);
     if constexpr (Degree == 0) {
         dw[0] = T(0);

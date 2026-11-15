@@ -37,8 +37,8 @@ TYPED_TEST(ScipyReference, MatchesMapCoordinatesMirror) {
             pixels[index] = ref::ref_image[index];
         }
     }
-    const bsi::BSplineImage<double, degree> spline(
-        bsi::ImageView<const double>{pixels.data(), ref::ref_width, ref::ref_height, ref::ref_width});
+    const bsi::BSplineImage<double, degree> spline(bsi::ImageView<const double>{
+        pixels.data(), ref::ref_width, ref::ref_height, ref::ref_width});
 
     double max_error = 0.0;
     for (std::size_t k = 0; k < static_cast<std::size_t>(ref::ref_count); ++k) {

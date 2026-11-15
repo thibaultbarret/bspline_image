@@ -185,8 +185,8 @@ public:
     /// @param dxy Output mixed second derivatives.
     /// @param dyy Output second derivatives along y.
     /// @pre All spans have the same size (checked by `assert` in debug builds).
-    void hessians(std::span<const T> xs, std::span<const T> ys, std::span<T> dxx,
-                  std::span<T> dxy, std::span<T> dyy) const noexcept {
+    void hessians(std::span<const T> xs, std::span<const T> ys, std::span<T> dxx, std::span<T> dxy,
+                  std::span<T> dyy) const noexcept {
         assert(xs.size() == ys.size() && xs.size() == dxx.size() && xs.size() == dxy.size() &&
                xs.size() == dyy.size());
         const auto c = coefficients();
@@ -259,8 +259,7 @@ private:
         }
 
         storage_.assign(static_cast<std::size_t>(stride * (height_ + 2 * pad)), T(0));
-        const CoeffView<T> view{storage_.data() + pad * stride + pad, width_, height_, stride,
-                                pad};
+        const CoeffView<T> view{storage_.data() + pad * stride + pad, width_, height_, stride, pad};
         for (std::ptrdiff_t j = 0; j < height_; ++j) {
             for (std::ptrdiff_t i = 0; i < width_; ++i) {
                 view.at(i, j) = static_cast<T>(work[static_cast<std::size_t>(j * width_ + i)]);

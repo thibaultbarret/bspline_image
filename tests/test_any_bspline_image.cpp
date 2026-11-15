@@ -164,8 +164,8 @@ TEST(AnyBSplineImage, FloatFacadeCallsEveryMethod) {
                 static_cast<std::uint8_t>(smooth_pixel(i, j));
         }
     }
-    const bsi::AnyBSplineImage<float> any(bsi::ImageView<const std::uint8_t>{img.data(), kW, kH, kW},
-                                          3);
+    const bsi::AnyBSplineImage<float> any(
+        bsi::ImageView<const std::uint8_t>{img.data(), kW, kH, kW}, 3);
     const bsi::BSplineImage<float, 3> core(
         bsi::ImageView<const std::uint8_t>{img.data(), kW, kH, kW});
     std::vector<float> xs, ys;

@@ -44,10 +44,9 @@ bsi::AnyBSplineImage<T> make_spline(const Image<P>& image, int degree) {
     if (image.stride(1) != 1) {
         throw std::invalid_argument("image rows must be contiguous");
     }
-    const bsi::ImageView<const P> view{
-        image.data(), static_cast<std::ptrdiff_t>(image.shape(1)),
-        static_cast<std::ptrdiff_t>(image.shape(0)),
-        static_cast<std::ptrdiff_t>(image.stride(0))};
+    const bsi::ImageView<const P> view{image.data(), static_cast<std::ptrdiff_t>(image.shape(1)),
+                                       static_cast<std::ptrdiff_t>(image.shape(0)),
+                                       static_cast<std::ptrdiff_t>(image.stride(0))};
     return bsi::AnyBSplineImage<T>(view, degree);
 }
 
@@ -127,8 +126,8 @@ void bind_spline(nb::module_& m, const char* name) {
             nb::arg("xs"), nb::arg("ys"), nb::arg("dx").noconvert(), nb::arg("dy").noconvert())
         .def(
             "values_and_gradients",
-            [](const Spline& s, const In<T>& xs, const In<T>& ys, const Out<T>& v,
-               const Out<T>& dx, const Out<T>& dy) {
+            [](const Spline& s, const In<T>& xs, const In<T>& ys, const Out<T>& v, const Out<T>& dx,
+               const Out<T>& dy) {
                 require_same_size(xs.size(), ys, v, dx, dy);
                 const auto x = in_span(xs);
                 const auto y = in_span(ys);
@@ -138,7 +137,8 @@ void bind_spline(nb::module_& m, const char* name) {
                 nb::gil_scoped_release release;
                 s.values_and_gradients(x, y, o, gx, gy);
             },
-            nb::arg("xs"), nb::arg("ys"), nb::arg("v").noconvert(), nb::arg("dx").noconvert(), nb::arg("dy").noconvert())
+            nb::arg("xs"), nb::arg("ys"), nb::arg("v").noconvert(), nb::arg("dx").noconvert(),
+            nb::arg("dy").noconvert())
         .def(
             "hessians",
             [](const Spline& s, const In<T>& xs, const In<T>& ys, const Out<T>& dxx,
@@ -152,13 +152,12 @@ void bind_spline(nb::module_& m, const char* name) {
                 nb::gil_scoped_release release;
                 s.hessians(x, y, hxx, hxy, hyy);
             },
-            nb::arg("xs"), nb::arg("ys"), nb::arg("dxx").noconvert(),
-            nb::arg("dxy").noconvert(), nb::arg("dyy").noconvert())
+            nb::arg("xs"), nb::arg("ys"), nb::arg("dxx").noconvert(), nb::arg("dxy").noconvert(),
+            nb::arg("dyy").noconvert())
         .def(
             "values_gradients_hessians",
-            [](const Spline& s, const In<T>& xs, const In<T>& ys, const Out<T>& v,
-               const Out<T>& dx, const Out<T>& dy, const Out<T>& dxx, const Out<T>& dxy,
-               const Out<T>& dyy) {
+            [](const Spline& s, const In<T>& xs, const In<T>& ys, const Out<T>& v, const Out<T>& dx,
+               const Out<T>& dy, const Out<T>& dxx, const Out<T>& dxy, const Out<T>& dyy) {
                 require_same_size(xs.size(), ys, v, dx, dy, dxx, dxy, dyy);
                 const auto x = in_span(xs);
                 const auto y = in_span(ys);

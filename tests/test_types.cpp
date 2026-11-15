@@ -7,7 +7,7 @@
 #include "bsi/types.hpp"
 
 TEST(Types, ImageViewAtRespectsStride) {
-    const std::uint16_t buf[] = {1, 2, 3, 99, 4, 5, 6, 99};   // 3x2, stride 4
+    const std::uint16_t buf[] = {1, 2, 3, 99, 4, 5, 6, 99};  // 3x2, stride 4
     bsi::ImageView<const std::uint16_t> v{buf, 3, 2, 4};
     EXPECT_EQ(v.at(0, 1), 4);
     EXPECT_EQ(v.at(2, 1), 6);
@@ -15,7 +15,7 @@ TEST(Types, ImageViewAtRespectsStride) {
 
 TEST(Types, CoeffViewAtAddressesPadding) {
     double buf[5 * 5] = {};
-    buf[0] = 7.0;                                              // 3x3 with pad 1, stride 5
+    buf[0] = 7.0;  // 3x3 with pad 1, stride 5
     bsi::CoeffView<double> c{buf + 5 + 1, 3, 3, 5, 1};
     EXPECT_EQ(c.at(-1, -1), 7.0);
 }

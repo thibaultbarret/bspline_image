@@ -16,7 +16,7 @@ namespace {
 
 template <class D>
 class Prefilter : public ::testing::Test {
-  protected:
+protected:
     static constexpr int degree = D::value;
 };
 TYPED_TEST_SUITE(Prefilter, AllDegrees);
@@ -84,7 +84,8 @@ TYPED_TEST(Prefilter, RespectsStep) {
         }
         bsi::prefilter_line<D>(inter.data(), n, step);
         for (std::ptrdiff_t k = 0; k < n; ++k) {
-            EXPECT_DOUBLE_EQ(inter[static_cast<std::size_t>(k * step)], ref[static_cast<std::size_t>(k)]);
+            EXPECT_DOUBLE_EQ(inter[static_cast<std::size_t>(k * step)],
+                             ref[static_cast<std::size_t>(k)]);
             if (k + 1 < n) {
                 EXPECT_EQ(inter[static_cast<std::size_t>(k * step + 1)], -7.0);
             }
