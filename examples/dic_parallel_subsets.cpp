@@ -30,7 +30,7 @@ namespace {
 constexpr int kSize = 256;
 constexpr int kBlobCount = 400;
 constexpr double kBlobRadius = 2.0;  // pixels
-constexpr int kBlobReach = 6;        // blobs are evaluated within kBlobReach pixels
+constexpr int kBlobReach = 10;  // truncation radius: the cut tails are below exp(-25) of the peak
 constexpr unsigned kSeed = 42;
 constexpr double kBlobAmplitude = 100.0;
 constexpr double kTrueUx = 0.4;
@@ -71,7 +71,8 @@ std::vector<Blob> make_blobs() {
 }
 
 /// Speckle pattern f (a seeded sum of Gaussian blobs) sampled at integer pixels after a shift:
-/// image(x) = f(x - shift). Because f is analytic, the shifted image is exact.
+/// image(x) = f(x - shift). f is analytic, so this is exact up to truncating each blob at
+/// kBlobReach pixels (relative error ~1e-11).
 std::vector<double> render_speckle(const std::vector<Blob>& blobs, double shift_x, double shift_y) {
     std::vector<double> img(static_cast<std::size_t>(kSize) * kSize, 0.0);
     for (const Blob& b : blobs) {
@@ -109,6 +110,8 @@ Displacement solve_subset(const Spline& deformed, const std::vector<double>& ref
     const std::size_t n = ref_values.size();
     std::vector<double> xs(n), ys(n), g(n), gx(n), gy(n), gxx(n), gxy(n), gyy(n);
 
+    // Full Newton assumes a start close to the minimum (H may be indefinite far from it); here
+    // u = (0, 0) is within 0.5 px of the true displacement.
     Displacement u;
     for (int it = 0; it < kMaxIterations; ++it) {
         for (std::size_t k = 0; k < n; ++k) {
@@ -144,6 +147,8 @@ std::vector<Displacement> solve_all(const Spline& deformed, const std::vector<do
                                     const std::vector<Subset>& subsets, unsigned thread_count) {
     std::vector<Displacement> results(subsets.size());
     // Thread t handles subsets t, t + n, t + 2n, ... and writes only its own result slots.
+    // An exception in a worker (e.g. bad_alloc) or a failed thread creation terminates the
+    // program, which is acceptable for an example.
     auto work = [&](std::size_t first) {
         for (std::size_t k = first; k < subsets.size(); k += thread_count) {
             results[k] = solve_subset(deformed, reference, subsets[k]);
