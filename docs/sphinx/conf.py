@@ -36,6 +36,8 @@ myst_enable_extensions = ["dollarmath", "amsmath", "colon_fence"]
 
 templates_path = ["_templates"]
 html_theme = "sphinx_rtd_theme"
+html_static_path = ["_static"]
+html_css_files = ["custom.css"]
 # The Doxygen HTML (built by the docs-api target) is published under api/.
 html_extra_path = [str(BUILD_DIR / "extra")]
 
