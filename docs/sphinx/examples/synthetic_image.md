@@ -17,8 +17,8 @@ how much the interpolation itself perturbs the synthetic image.
 
 ## Reference image
 
-The speckle has 300 Gaussian spots of standard deviation 2 px on a 128 x 128 image: spots a
-few pixels wide, well resolved, as DIC requires.
+The speckle has Gaussian spots of standard deviation 2 px (about a dozen pixels across), on a
+160 x 160 image, with a density of 450 spots per image area: well resolved, as DIC requires.
 
 ```{code-cell} ipython3
 import matplotlib.pyplot as plt
@@ -27,11 +27,11 @@ import numpy as np
 from bspline_image import BSplineImage
 from speckle import make_speckle, sample
 
-SIZE = 128
+SIZE = 160
 DEGREE = 5
-MARGIN = 8
+MARGIN = 24
 
-f = make_speckle(n_spots=300, radius=2.0, extent=(SIZE - 1, SIZE - 1), seed=7)
+f = make_speckle(n_spots=450, radius=2.0, extent=(SIZE - 1, SIZE - 1), seed=7)
 reference = sample(f, SIZE, SIZE)
 ```
 
@@ -71,14 +71,18 @@ deformed = spline.values(source_x, source_y)
 deformed_exact = f(source_x, source_y)
 ```
 
-The same computation in C++ (this is the shipped example, which warps with a smooth
-displacement field):
+A comparable C++ program ships with the library (different displacement field and speckle):
 
 ```{literalinclude} ../../../examples/synthetic_image.cpp
 :language: cpp
 ```
 
 ## Result
+
+The error is measured in the useful zone, at least 24 px away from the borders, as in
+practice where the region of interest (for instance a finite-element mesh) keeps a margin
+inside the image. The image borders are perturbed by the prefilter's mirror assumption, see
+the margin study in {doc}`interpolation_accuracy`.
 
 ```{code-cell} ipython3
 inner = (slice(MARGIN, SIZE - MARGIN),) * 2
@@ -88,7 +92,7 @@ fig, axes = plt.subplots(1, 3, figsize=(11, 3.8))
 for ax, data, title in zip(
     axes[:2], (reference, deformed), ("Reference", f"Deformed (degree {DEGREE})")
 ):
-    im = ax.imshow(data, cmap="gray", vmin=0, vmax=reference.max())
+    ax.imshow(data, cmap="gray", vmin=0, vmax=reference.max())
     ax.set_title(title)
 vmax = np.abs(difference[inner]).max()
 im = axes[2].imshow(difference, cmap="RdBu_r", vmin=-vmax, vmax=vmax)
@@ -100,9 +104,11 @@ for ax in axes:
 fig.tight_layout()
 plt.show()
 
+# As in practice, the comparison is made in the useful zone, which keeps a margin
+# around it (the finite-element mesh of a DIC test, say), not up to the image borders.
 rms_error = np.sqrt(np.mean(difference[inner] ** 2))
-relative = rms_error / reference[inner].std()
-print(f"RMS error in the interior: {rms_error:.2e} ({100 * relative:.4f} % of the image std)")
+relative = rms_error / reference.std()
+print(f"RMS error in the interior (margin {MARGIN} px): {rms_error:.2e} ({100 * relative:.4f} % of the image std)")
 ```
 
 ```{code-cell} ipython3

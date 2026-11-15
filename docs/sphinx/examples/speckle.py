@@ -12,35 +12,30 @@ from collections.abc import Callable
 import numpy as np
 
 AMPLITUDE_RANGE = (0.5, 1.0)
+SPOT_REACH = 3.0  # spots farther than this many radii outside the image are negligible
 
 Field = Callable[[np.ndarray, np.ndarray], np.ndarray]
 
 
 def _draw_spots(
-    n_spots: int, extent: tuple[float, float], seed: int
+    n_spots: int, radius: float, extent: tuple[float, float], seed: int
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return (centres_x, centres_y, amplitudes) drawn from a seeded generator."""
+    """Return (centres_x, centres_y, amplitudes) drawn from a seeded generator.
+
+    Centres are uniform over the image extent enlarged by ``SPOT_REACH * radius`` on
+    every side, with the count scaled so that ``n_spots`` is the number of spots per
+    image area. Spots centred just outside the image still light its border, so the
+    density of grey levels is uniform up to the edges.
+    """
     rng = np.random.default_rng(seed)
     width, height = extent
-    cx = rng.uniform(0.0, width, n_spots)
-    cy = rng.uniform(0.0, height, n_spots)
-    amplitude = rng.uniform(*AMPLITUDE_RANGE, n_spots)
-    return _mirror_images(cx, cy, amplitude, extent)
-
-
-def _mirror_images(cx, cy, amplitude, extent):
-    """Add the mirror images of every spot about the lines x = 0, x = W, y = 0, y = H.
-
-    The sum is then symmetric about those lines, which is exactly the boundary
-    condition of the interpolator: the analytic reference stays valid up to the edges
-    of the image when ``extent`` is the coordinate of its last pixel.
-    """
-    width, height = extent
-    x_variants = (cx, -cx, 2.0 * width - cx)
-    y_variants = (cy, -cy, 2.0 * height - cy)
-    px = np.concatenate([xv for xv in x_variants for _ in y_variants])
-    py = np.concatenate([yv for _ in x_variants for yv in y_variants])
-    return px, py, np.tile(amplitude, 9)
+    pad = SPOT_REACH * radius
+    area_ratio = (width + 2 * pad) * (height + 2 * pad) / (width * height)
+    n_total = round(n_spots * area_ratio)
+    cx = rng.uniform(-pad, width + pad, n_total)
+    cy = rng.uniform(-pad, height + pad, n_total)
+    amplitude = rng.uniform(*AMPLITUDE_RANGE, n_total)
+    return cx, cy, amplitude
 
 
 def _spot_terms(cx, cy, amplitude, radius, x, y):
@@ -56,10 +51,12 @@ def make_speckle(
 ) -> Field:
     """Build f(x, y), a sum of ``n_spots`` Gaussians of standard deviation ``radius``.
 
-    Spot centres are uniform in ``[0, extent[0]] x [0, extent[1]]`` and amplitudes in
-    ``[0.5, 1]``. The returned function is vectorised over numpy arrays.
+    ``extent`` is the extent of the image, ``(width - 1, height - 1)``, and ``n_spots`` the
+    number of spots over that area (centres also fall up to 3 radii outside it, see
+    `_draw_spots`). Amplitudes are uniform in ``[0.5, 1]``. The returned function is
+    vectorised over numpy arrays.
     """
-    cx, cy, amplitude = _draw_spots(n_spots, extent, seed)
+    cx, cy, amplitude = _draw_spots(n_spots, radius, extent, seed)
 
     def field(x: np.ndarray, y: np.ndarray) -> np.ndarray:
         x = np.asarray(x, dtype=np.float64)
@@ -76,7 +73,7 @@ def make_speckle_gradient(
     n_spots: int, radius: float, extent: tuple[float, float], seed: int
 ) -> Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]:
     """Build (df/dx, df/dy) of the speckle made by `make_speckle` (same arguments)."""
-    cx, cy, amplitude = _draw_spots(n_spots, extent, seed)
+    cx, cy, amplitude = _draw_spots(n_spots, radius, extent, seed)
     inv_var = 1.0 / (radius * radius)
 
     def gradient(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:

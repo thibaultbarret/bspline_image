@@ -43,6 +43,7 @@ doxylink = {"bsi": (str(BUILD_DIR / "bsi.tag"), "api")}
 nb_execution_mode = os.environ.get("BSI_DOCS_EXECUTION", "cache")
 nb_execution_cache_path = str(BUILD_DIR / "jupyter_cache")
 nb_execution_raise_on_error = True
+nb_render_markdown_format = "myst"
 nb_execution_timeout = 120
 
 exclude_patterns = ["**.ipynb_checkpoints"]
