@@ -1,0 +1,3 @@
+# Bulk reformatting commits, skipped by git blame (git config blame.ignoreRevsFile .git-blame-ignore-revs).
+# style: apply clang-format to all C++ sources
+f8c4187bea76137dc740e89d6d16e712b47f5fff
