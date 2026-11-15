@@ -254,9 +254,10 @@ TYPED_TEST(BSplineImageT, HessianTinyImages) {
             }
             EXPECT_NEAR(h.dxy, 0.0, 1e-9);
         }
-        // The non-degenerate dimension must still carry a non-zero second derivative
-        // (degrees 0 to 2 are piecewise constant or zero, so only checked from degree 3).
-        if (D >= 3) {
+        // The non-degenerate dimension must still carry a non-zero second derivative.
+        // Degrees 0 and 1 have dxx = dyy = 0 everywhere; degree 2 is piecewise constant
+        // but non-zero, so the check applies from degree 2.
+        if (D >= 2) {
             EXPECT_GT(max_along_free_axis, 1e-6);
         }
     }
