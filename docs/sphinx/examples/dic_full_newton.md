@@ -26,10 +26,12 @@ Same pair of images, same 31 x 31 subset far from the borders and same stopping 
 degree 5 and an imposed translation $\mathbf{u}^* = (0.4, 0.3)$ px.
 
 ```{code-cell} ipython3
+import matplotlib.pyplot as plt
 import numpy as np
 from IPython.display import Markdown, display
 
-from dic_problem import reference_values, subset_x, subset_y, translated_spline
+from dic_problem import HALF_SIZE, reference_values, subset_x, subset_y, translated_spline
+from reference_image import load_speckle_reference, plot_subset_context
 
 STOP_TOLERANCE = 1e-6  # px, on the norm of the update
 MAX_ITERATIONS = 50
@@ -37,6 +39,18 @@ U_STAR = np.array([0.4, 0.3])
 START = np.zeros(2)
 
 spline = translated_spline(U_STAR, degree=5)
+```
+
+The figure shows the kind of subset this page correlates on a real speckle image (a 512 x 512
+photograph, 8-bit grey levels), framed in red with a detail of its pixels. The computations
+keep the analytic speckle of {doc}`dic_gauss_newton`, for an exact comparison to the imposed
+displacement.
+
+```{code-cell} ipython3
+real = load_speckle_reference()
+centre = real.shape[0] // 2
+plot_subset_context(real, (centre, centre), HALF_SIZE)
+plt.show()
 ```
 
 ## The two solvers
