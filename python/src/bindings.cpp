@@ -88,6 +88,20 @@ void bind_spline(nb::module_& m, const char* name) {
             },
             nb::arg("x"), nb::arg("y"))
         .def(
+            "hessian",
+            [](const Spline& s, T x, T y) {
+                const auto h = s.hessian(x, y);
+                return nb::make_tuple(h.dxx, h.dxy, h.dyy);
+            },
+            nb::arg("x"), nb::arg("y"))
+        .def(
+            "value_gradient_hessian",
+            [](const Spline& s, T x, T y) {
+                const auto r = s.value_gradient_hessian(x, y);
+                return nb::make_tuple(r.value, r.dx, r.dy, r.dxx, r.dxy, r.dyy);
+            },
+            nb::arg("x"), nb::arg("y"))
+        .def(
             "values",
             [](const Spline& s, const In<T>& xs, const In<T>& ys, const Out<T>& out) {
                 require_same_size(xs.size(), ys, out);
@@ -124,7 +138,42 @@ void bind_spline(nb::module_& m, const char* name) {
                 nb::gil_scoped_release release;
                 s.values_and_gradients(x, y, o, gx, gy);
             },
-            nb::arg("xs"), nb::arg("ys"), nb::arg("v").noconvert(), nb::arg("dx").noconvert(), nb::arg("dy").noconvert());
+            nb::arg("xs"), nb::arg("ys"), nb::arg("v").noconvert(), nb::arg("dx").noconvert(), nb::arg("dy").noconvert())
+        .def(
+            "hessians",
+            [](const Spline& s, const In<T>& xs, const In<T>& ys, const Out<T>& dxx,
+               const Out<T>& dxy, const Out<T>& dyy) {
+                require_same_size(xs.size(), ys, dxx, dxy, dyy);
+                const auto x = in_span(xs);
+                const auto y = in_span(ys);
+                const auto hxx = out_span(dxx);
+                const auto hxy = out_span(dxy);
+                const auto hyy = out_span(dyy);
+                nb::gil_scoped_release release;
+                s.hessians(x, y, hxx, hxy, hyy);
+            },
+            nb::arg("xs"), nb::arg("ys"), nb::arg("dxx").noconvert(),
+            nb::arg("dxy").noconvert(), nb::arg("dyy").noconvert())
+        .def(
+            "values_gradients_hessians",
+            [](const Spline& s, const In<T>& xs, const In<T>& ys, const Out<T>& v,
+               const Out<T>& dx, const Out<T>& dy, const Out<T>& dxx, const Out<T>& dxy,
+               const Out<T>& dyy) {
+                require_same_size(xs.size(), ys, v, dx, dy, dxx, dxy, dyy);
+                const auto x = in_span(xs);
+                const auto y = in_span(ys);
+                const auto o = out_span(v);
+                const auto gx = out_span(dx);
+                const auto gy = out_span(dy);
+                const auto hxx = out_span(dxx);
+                const auto hxy = out_span(dxy);
+                const auto hyy = out_span(dyy);
+                nb::gil_scoped_release release;
+                s.values_gradients_hessians(x, y, o, gx, gy, hxx, hxy, hyy);
+            },
+            nb::arg("xs"), nb::arg("ys"), nb::arg("v").noconvert(), nb::arg("dx").noconvert(),
+            nb::arg("dy").noconvert(), nb::arg("dxx").noconvert(), nb::arg("dxy").noconvert(),
+            nb::arg("dyy").noconvert());
 }
 
 }  // namespace

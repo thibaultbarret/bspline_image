@@ -75,3 +75,28 @@ runs the same concrete-type loop as the core. The 10 % criterion is therefore no
 violated, but it also cannot be confirmed tightly on this machine; re-measure on a quiet machine
 before using these numbers to detect small regressions. Facade pointwise calls (per-call dispatch)
 are consistently a few ns/point slower than core for degrees 1 and 3.
+
+## v2 Hessian evaluation (2026-11-14)
+
+The bench now also reports `value_gradient_hessian` (value, gradient and the three second
+derivatives) for the core type and the facade (pointwise). Same machine, compiler, flags and
+workload as above; single run of the benchmark (each cell is the min of 5 passes), ns/point.
+`value`, `value_and_gradient` and `visit` columns are unchanged code paths; their numbers are
+re-measured in the same run.
+
+| degree | type | core value | core value_and_gradient | core value_gradient_hessian | facade value | facade value_and_gradient | facade value_gradient_hessian | facade + visit value | facade + visit value_and_gradient | visit vs core value |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | float | 8.72 | 11.50 | 18.54 | 16.60 | 17.53 | 18.10 | 8.16 | 11.84 | -6.5% |
+| 1 | double | 13.46 | 13.12 | 20.36 | 17.86 | 18.36 | 21.70 | 16.35 | 18.26 | +21.4% |
+| 3 | float | 30.74 | 49.04 | 43.32 | 34.45 | 45.45 | 44.59 | 33.15 | 43.32 | +7.8% |
+| 3 | double | 42.52 | 61.80 | 67.28 | 39.55 | 57.90 | 50.64 | 53.12 | 49.92 | +24.9% |
+| 5 | float | 57.25 | 85.90 | 117.11 | 58.66 | 87.06 | 116.42 | 57.64 | 85.01 | +0.7% |
+| 5 | double | 61.78 | 78.76 | 128.06 | 67.57 | 85.27 | 128.25 | 60.98 | 79.76 | -1.3% |
+| 7 | float | 88.52 | 172.31 | 208.30 | 92.29 | 177.65 | 206.51 | 91.29 | 171.56 | +3.1% |
+| 7 | double | 99.15 | 107.33 | 234.40 | 104.79 | 147.85 | 226.48 | 99.49 | 160.27 | +0.3% |
+
+Reading: for degree 5, the full value + gradient + Hessian costs about 1.4-1.6x
+`value_and_gradient` and about 2x `value` (117-128 ns/point). This is a single run: several
+facade-vs-core cells deviate by -25 % to +38 % (for example degree 3 double `vgh` and degree 7
+double `vg`), which is consistent with the run-to-run noise seen in the visit overhead check
+above. No systematic facade overhead is claimed.

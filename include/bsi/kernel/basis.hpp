@@ -299,4 +299,47 @@ BSI_HOST_DEVICE inline std::ptrdiff_t weights_and_derivatives(T x, T* w, T* dw) 
     return i0;
 }
 
+/// @brief Weights and their first and second derivatives.
+///
+/// \f$w_k\f$ and \f$dw_k\f$ are those of `weights_and_derivatives`, and
+/// \f$ddw_k = \beta^{n\prime\prime}(u_k)\f$ with \f$u_k = x - (i_0 + k)\f$, using
+/// \f$\beta^{n\prime\prime}(u) = \beta^{n-2}(u+1) - 2\beta^{n-2}(u) + \beta^{n-2}(u-1)\f$ for
+/// \f$n \ge 2\f$. For \f$n \le 1\f$ the second derivative is taken as 0 (it is a sum of
+/// Dirac masses at the knots for \f$n = 1\f$). For \f$n = 2\f$ it is piecewise constant and
+/// the value at a knot is the right one (in folded coordinates). The second derivatives sum to 0.
+///
+/// @tparam T      Floating-point scalar type.
+/// @tparam Degree Spline degree \f$n\f$.
+/// @param x Evaluation point (finite).
+/// @param[out] w   Output weights, at least `Degree + 1` values.
+/// @param[out] dw  Output weight derivatives, at least `Degree + 1` values.
+/// @param[out] ddw Output weight second derivatives, at least `Degree + 1` values.
+/// @return \f$i_0\f$ = `first_index<T, Degree>(x)`.
+template <class T, int Degree>
+BSI_HOST_DEVICE inline std::ptrdiff_t weights_and_second_derivatives(T x, T* w, T* dw,
+                                                                     T* ddw) noexcept {
+    static_assert(detail::valid_basis_params<T, Degree>,
+                  "weights_and_second_derivatives: T must be floating point and "
+                  "0 <= Degree <= max_degree");
+    const std::ptrdiff_t i0 = weights_and_derivatives<T, Degree>(x, w, dw);
+    if constexpr (Degree < 2) {
+        for (int k = 0; k <= Degree; ++k) {
+            ddw[k] = T(0);
+        }
+    } else {
+        // low[j] = M_{n-1}(t + j), j = 0..n-2 (degree n-2); out of range entries are 0.
+        const T t = detail::fractional_position<T, Degree>(x);
+        T low[Degree - 1];
+        detail::cardinal_values(t, Degree - 2, low);
+        for (int k = 0; k <= Degree; ++k) {
+            const int j = Degree - k;
+            const T c0 = (j <= Degree - 2) ? low[j] : T(0);
+            const T c1 = (j >= 1 && j - 1 <= Degree - 2) ? low[j - 1] : T(0);
+            const T c2 = (j >= 2) ? low[j - 2] : T(0);
+            ddw[k] = c0 - T(2) * c1 + c2;
+        }
+    }
+    return i0;
+}
+
 }  // namespace bsi

@@ -134,6 +134,25 @@ public:
                           impl_);
     }
 
+    /// @brief Interpolated second derivatives at (x, y).
+    ///
+    /// Degree 3 or more is recommended, and 5 for a full Newton iteration.
+    /// @param x Horizontal coordinate.
+    /// @param y Vertical coordinate.
+    /// @return Second derivatives (dxx, dxy, dyy).
+    Hessian<T> hessian(T x, T y) const noexcept {
+        return std::visit([&](const auto& s) noexcept { return s.hessian(x, y); }, impl_);
+    }
+
+    /// @brief Interpolated value, gradient and Hessian at (x, y).
+    /// @param x Horizontal coordinate.
+    /// @param y Vertical coordinate.
+    /// @return Value, first and second derivatives.
+    ValueGradientHessian<T> value_gradient_hessian(T x, T y) const noexcept {
+        return std::visit([&](const auto& s) noexcept { return s.value_gradient_hessian(x, y); },
+                          impl_);
+    }
+
     /// @brief Evaluate the value at many points.
     /// @param xs Horizontal coordinates.
     /// @param ys Vertical coordinates, same size as `xs`.
@@ -162,6 +181,36 @@ public:
                               std::span<T> dx, std::span<T> dy) const noexcept {
         std::visit([&](const auto& s) noexcept { s.values_and_gradients(xs, ys, v, dx, dy); },
                    impl_);
+    }
+
+    /// @brief Evaluate the second derivatives at many points.
+    /// @param xs Horizontal coordinates.
+    /// @param ys Vertical coordinates, same size as `xs`.
+    /// @param dxx Output second derivatives along x, same size as `xs`.
+    /// @param dxy Output mixed second derivatives, same size as `xs`.
+    /// @param dyy Output second derivatives along y, same size as `xs`.
+    void hessians(std::span<const T> xs, std::span<const T> ys, std::span<T> dxx,
+                  std::span<T> dxy, std::span<T> dyy) const noexcept {
+        std::visit([&](const auto& s) noexcept { s.hessians(xs, ys, dxx, dxy, dyy); }, impl_);
+    }
+
+    /// @brief Evaluate value, gradient and Hessian at many points.
+    /// @param xs Horizontal coordinates.
+    /// @param ys Vertical coordinates, same size as `xs`.
+    /// @param v Output values, same size as `xs`.
+    /// @param dx Output horizontal derivatives, same size as `xs`.
+    /// @param dy Output vertical derivatives, same size as `xs`.
+    /// @param dxx Output second derivatives along x, same size as `xs`.
+    /// @param dxy Output mixed second derivatives, same size as `xs`.
+    /// @param dyy Output second derivatives along y, same size as `xs`.
+    void values_gradients_hessians(std::span<const T> xs, std::span<const T> ys, std::span<T> v,
+                                   std::span<T> dx, std::span<T> dy, std::span<T> dxx,
+                                   std::span<T> dxy, std::span<T> dyy) const noexcept {
+        std::visit(
+            [&](const auto& s) noexcept {
+                s.values_gradients_hessians(xs, ys, v, dx, dy, dxx, dxy, dyy);
+            },
+            impl_);
     }
 
     /// @brief Call `f` with the concrete `BSplineImage` type, dispatching once.

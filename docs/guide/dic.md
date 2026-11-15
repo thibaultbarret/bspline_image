@@ -54,5 +54,9 @@ See `examples/dic_visit.cpp` for a complete program. The batch methods (`values`
 `gradients`, `values_and_gradients`) are the alternative when points are already in arrays;
 they dispatch once per call.
 
+For a full Newton scheme, `value_gradient_hessian` and `values_gradients_hessians` return
+\f$I\f$, \f$\nabla I\f$ and \f$\nabla^2 I\f$ in one pass. Use degree 3 or more (5 is
+recommended): lower degrees have a trivial or discontinuous Hessian.
+
 All evaluation methods are `const`, so one interpolator can be read from several threads
 at once; parallelise over subsets in the caller.

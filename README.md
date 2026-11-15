@@ -10,7 +10,7 @@ image generation and digital image correlation (DIC), where the interpolated val
 gradient are evaluated millions of times.
 
 - Spline degrees 0 to 7, odd and even, chosen at compile time or at run time.
-- Value and gradient evaluation at arbitrary real coordinates.
+- Value, gradient and Hessian evaluation at arbitrary real coordinates.
 - Mirror boundary conditions (same as SciPy `mode='mirror'`).
 - No dependency beyond the C++20 standard library; header-only.
 - GPU-ready kernels: the lowest layer is allocation-free, exception-free and annotated
@@ -50,10 +50,16 @@ int main() {
     const bsi::BSplineImage<double, 3> spline(view);          // cubic, prefiltered once
     const auto vg = spline.value_and_gradient(10.25, 20.75);  // sub-pixel position
     // vg.value, vg.dx, vg.dy
+    const auto h = spline.value_gradient_hessian(10.25, 20.75);     // adds second derivatives
+    // h.value, h.dx, h.dy, h.dxx, h.dxy, h.dyy
 }
 ```
 
-Pixel (i, j) sits at coordinate (x = i, y = j). Supported pixel types are `std::uint8_t`,
+Pixel (i, j) sits at coordinate (x = i, y = j). Second derivatives (`hessian`,
+`value_gradient_hessian` and their batch forms `hessians`, `values_gradients_hessians`) are
+exact for degrees 0 to 2 but of limited use there (degree 1 has dxx = dyy = 0 and a piecewise
+constant dxy); use degree 3 or more,
+and 5 for a full Newton iteration. Supported pixel types are `std::uint8_t`,
 `std::uint16_t`, `float` and `double`. For a degree chosen at run time, use
 `bsi::AnyBSplineImage<T>(view, degree)`; in hot loops, dispatch once with its `visit()`
 method.
@@ -76,6 +82,8 @@ img = np.random.default_rng(0).uniform(0, 255, (64, 48))   # shape (height, widt
 spline = bsi.BSplineImage(img, degree=3)                   # prefiltered once
 print(spline.value(10.25, 20.75))                          # x = column, y = row
 values, dx, dy = spline.values_and_gradients(np.array([1.5, 2.5]), np.array([3.5, 4.5]))
+xs, ys = np.array([1.5, 2.5]), np.array([3.5, 4.5])
+v, dx, dy, dxx, dxy, dyy = spline.values_gradients_hessians(xs, ys)   # degree >= 3 advised
 ```
 
 Images are indexed `img[y, x]`: x is the column and y the row, so pixel `img[y, x]` sits at

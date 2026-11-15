@@ -79,3 +79,17 @@ in the x direction and ordinary weights in y, and conversely for \f$\partial_y f
 (`bsi::weights_and_derivatives`, `bsi::evaluate_with_gradient`). The derivative is exact
 for the interpolating spline, not a finite-difference estimate. For degree 1 the derivative
 at a knot is the right derivative; degree 0 has zero derivative.
+
+## Second derivatives
+
+Differentiating once more gives a difference of three B-splines of degree \f$n-2\f$:
+
+\f[ \beta^{n\prime\prime}(u) = \beta^{n-2}(u+1) - 2\,\beta^{n-2}(u) + \beta^{n-2}(u-1), \f]
+
+valid for \f$n \ge 2\f$ (`bsi::weights_and_second_derivatives`, `bsi::evaluate_with_hessian`).
+\f$\partial_{xx} f\f$ uses the second-derivative weights along x and ordinary weights along
+y, \f$\partial_{yy} f\f$ the converse, and \f$\partial_{xy} f\f$ the first-derivative weights
+along both axes. Under the mirror fold, \f$\partial_{xx}\f$ and \f$\partial_{yy}\f$ are even
+(unchanged), while \f$\partial_{xy}\f$ is multiplied by \f$s_x s_y\f$, the product of the fold
+orientations. For degree 1, \f$\partial_{xx} = \partial_{yy} = 0\f$ but \f$\partial_{xy}\f$
+is piecewise constant and generally non-zero; degree 2 is piecewise constant.
