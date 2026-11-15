@@ -80,6 +80,6 @@ helper modules (`speckle.py`, `dic_problem.py`) or the library, remove the doctr
 re-execute everything:
 
 ```sh
-rm -rf build/docs/doctrees
+rm -rf build/docs/docs/doctrees
 PATH="$PWD/.venv/bin:$PATH" BSI_DOCS_EXECUTION=force cmake --build --preset docs --target docs
 ```

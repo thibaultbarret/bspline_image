@@ -110,8 +110,8 @@ assert [len(norms) for _, norms in case1] == [3, 4], [len(norms) for _, norms in
 
 Both methods converge in a handful of iterations, and Newton takes one more than Gauss-Newton
 here (4 against 3), plausibly because away from the solution the term $r\, \nabla^2 G_s$ is not
-negligible and the first Newton steps are not better. Near the solution the residual $r$ vanishes, since the
-deformed image is exactly a translated copy of the reference (up to the interpolation error):
+negligible and the first Newton steps are not better. Near the solution the residual $r$
+vanishes, since the deformed image is exactly a translated copy of the reference (up to the interpolation error):
 the term $2 \sum r\, \nabla^2 G_s$ that Gauss-Newton drops is then negligible, so
 Gauss-Newton is itself nearly quadratic and the full Hessian brings nothing.
 
