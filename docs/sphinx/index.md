@@ -24,6 +24,7 @@ coordinate (x = i, y = j).
 installation
 user_guide
 theory
+examples/index
 gpu
 ```
 
