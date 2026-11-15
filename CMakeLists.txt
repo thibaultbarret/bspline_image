@@ -26,9 +26,11 @@ option(BSI_BUILD_DOCS "Build the documentation (Sphinx site and Doxygen API)" OF
 option(BSI_WARNINGS_AS_ERRORS "Treat warnings as errors on internal targets" OFF)
 option(BSI_SANITIZE "Enable AddressSanitizer and UBSan on internal targets" OFF)
 option(BSI_COVERAGE "Enable coverage instrumentation on internal targets" OFF)
+option(BSI_NATIVE "Compile internal targets and the Python module for the host CPU (-march=native)" OFF)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
+include(cmake/BsiNative.cmake)
 include(cmake/BsiWarnings.cmake)
 
 # Sanitizer / coverage flags: internal targets only (carried by bsi_warnings).

@@ -128,6 +128,11 @@ ctest --test-dir build --output-on-failure
 
 In-source builds are refused: always configure into a separate directory.
 
+For a faster build tuned to the host CPU (hardware FMA, AVX2), pass `-DBSI_NATIVE=ON`
+(`pip install . -Ccmake.define.BSI_NATIVE=ON` for the Python module). It only affects the
+tests, examples, benchmarks and Python module, never the installed library, and the
+resulting binaries only run on CPUs compatible with the build machine.
+
 CMake presets (`dev`, `release`, `python`, `docs`, `sanitize`; list them with
 `cmake --list-presets`) provide ready-made configurations, also usable from IDEs:
 

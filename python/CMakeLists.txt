@@ -18,7 +18,7 @@ endif()
 
 # Strict warnings (bsi_warnings) are intentionally not applied to the module.
 nanobind_add_module(_core NB_STATIC NOMINSIZE src/bindings.cpp)
-target_link_libraries(_core PRIVATE bsi::bspline_image)
+target_link_libraries(_core PRIVATE bsi::bspline_image bsi_native)
 
 nanobind_add_stub(_core_stub
   MODULE _core
