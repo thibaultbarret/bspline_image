@@ -161,7 +161,7 @@ def real_antecedent(xs, ys):
     )
 
 
-def real_image(xs, ys):
+def real_forward(xs, ys):
     """Deformed-image position of the reference positions (xs, ys): the forward transformation."""
     dx = xs - REAL_CENTRE[0]
     dy = ys - REAL_CENTRE[1]
@@ -174,13 +174,13 @@ def real_image(xs, ys):
 
 real_rows, real_cols = np.mgrid[0:REAL_SIZE, 0:REAL_SIZE].astype(np.float64)
 real_deformed = BSplineImage(real, degree=DEGREE).values(*real_antecedent(real_cols, real_rows))
-round_trip = BSplineImage(real_deformed, degree=DEGREE).values(*real_image(real_cols, real_rows))
+round_trip = BSplineImage(real_deformed, degree=DEGREE).values(*real_forward(real_cols, real_rows))
 ```
 
 The figure shows the reference, the deformed image and their difference (top), then a 48 x 48
 pixel detail of both images, drawn pixel by pixel, and the round-trip error in the useful zone (bottom). The
-difference is large wherever the speckle has contrast, since the image moved; only the round
-trip isolates the interpolation.
+difference is small near the centre and grows away from it, where the rotation and the dilation
+move the image more; only the round trip isolates the interpolation.
 
 ```{code-cell} ipython3
 ZOOM = 48
@@ -198,7 +198,8 @@ panels = (
     (axes[1, 1], real_deformed[zoom], "Deformed, detail"),
 )
 for ax, data, title in panels:
-    ax.imshow(data, cmap="gray", vmin=0, vmax=255, interpolation="nearest")
+    # Pixel-by-pixel rendering for the details only; the full images are resampled smoothly.
+    ax.imshow(data, cmap="gray", vmin=0, vmax=255, interpolation="nearest" if data.shape[0] == ZOOM else "auto")
     ax.set_title(title)
 for ax, data, title in (
     (axes[0, 2], real_deformed - real, "Deformed - reference"),
@@ -225,7 +226,10 @@ print(f"{100 * saturated:.0f} % of the pixels are saturated at 0")
 ```
 
 The two successive interpolations leave a residual of well under one percent of the image
-contrast. About 12 % of the pixels of this image are saturated at 0: where a smooth speckle
+standard deviation. The error map shows a lattice: the interpolation error vanishes where the
+warped positions fall on whole pixels and peaks half-way between them, so the pattern repeats
+about every 27 px, the inverse of the distance $|(1.01 \cos 2^\circ - 1,\ 1.01 \sin 2^\circ)|$,
+and is tilted by the rotation. About 12 % of the pixels of this image are saturated at 0: where a smooth speckle
 spot meets the clipped floor the grey level has a kink, which a smooth spline follows less
 well than the rest of the image. The thresholds of the hidden check are set from the printed
 measurement with a wide margin: 1.5 grey levels RMS and 8 grey levels at most.
