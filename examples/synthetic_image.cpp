@@ -21,7 +21,7 @@ namespace {
 
 constexpr int kSize = 256;
 constexpr int kBlobCount = 400;
-constexpr double kBlobRadius = 2.0;   // pixels
+constexpr double kBlobRadius = 2.0;  // pixels
 constexpr unsigned kSeed = 42;
 constexpr double kAmplitudeX = 0.5;   // u = 0.5 sin(2 pi y / 256)
 constexpr double kAmplitudeY = 0.25;  // v = 0.25 cos(2 pi x / 256)

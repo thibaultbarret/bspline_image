@@ -138,8 +138,7 @@ BSI_HOST_DEVICE inline T evaluate(CoeffView<const T> c, T x, T y) noexcept {
 template <class T, int Degree>
 BSI_HOST_DEVICE inline ValueAndGradient<T> evaluate_with_gradient(CoeffView<const T> c, T x,
                                                                   T y) noexcept {
-    static_assert(std::is_floating_point_v<T>,
-                  "evaluate_with_gradient: T must be floating point");
+    static_assert(std::is_floating_point_v<T>, "evaluate_with_gradient: T must be floating point");
     if (!std::isfinite(x) || !std::isfinite(y)) {
         const T nan = detail::make_nan<T>();
         return ValueAndGradient<T>{nan, nan, nan};
@@ -195,8 +194,7 @@ BSI_HOST_DEVICE inline ValueAndGradient<T> evaluate_with_gradient(CoeffView<cons
 template <class T, int Degree>
 BSI_HOST_DEVICE inline ValueGradientHessian<T> evaluate_with_hessian(CoeffView<const T> c, T x,
                                                                      T y) noexcept {
-    static_assert(std::is_floating_point_v<T>,
-                  "evaluate_with_hessian: T must be floating point");
+    static_assert(std::is_floating_point_v<T>, "evaluate_with_hessian: T must be floating point");
     if (!std::isfinite(x) || !std::isfinite(y)) {
         const T nan = detail::make_nan<T>();
         return ValueGradientHessian<T>{nan, nan, nan, nan, nan, nan};
@@ -230,12 +228,8 @@ BSI_HOST_DEVICE inline ValueGradientHessian<T> evaluate_with_hessian(CoeffView<c
         sum_dxy = detail::mul_add(dwy[l], r_dx, sum_dxy);
         sum_dxx = detail::mul_add(wy[l], r_dxx, sum_dxx);
     }
-    return ValueGradientHessian<T>{value,
-                                   fx.sign * sum_dx,
-                                   fy.sign * sum_dy,
-                                   sum_dxx,
-                                   fx.sign * fy.sign * sum_dxy,
-                                   sum_dyy};
+    return ValueGradientHessian<T>{
+        value, fx.sign * sum_dx, fy.sign * sum_dy, sum_dxx, fx.sign * fy.sign * sum_dxy, sum_dyy};
 }
 
 }  // namespace bsi

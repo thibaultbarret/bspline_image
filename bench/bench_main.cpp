@@ -31,8 +31,8 @@ struct Points {
 template <class T>
 Points<T> make_points() {
     std::mt19937 rng(kSeed);
-    std::uniform_real_distribution<double> coord(
-        kMargin, static_cast<double>(kImageSize) - 1.0 - kMargin);
+    std::uniform_real_distribution<double> coord(kMargin,
+                                                 static_cast<double>(kImageSize) - 1.0 - kMargin);
     Points<T> p;
     p.xs.reserve(kPointCount);
     p.ys.reserve(kPointCount);
@@ -146,8 +146,8 @@ void bench_row(const std::vector<float>& image) {
     const double overhead = 100.0 * (facade_visit - core_value) / core_value;
     std::printf("| %d | %s | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f | %.2f | %+.1f%% |\n",
                 Degree, sizeof(T) == sizeof(float) ? "float" : "double", core_value, core_vg,
-                core_vgh, facade_point, facade_vg_point, facade_vgh, facade_visit,
-                facade_vg_visit, overhead);
+                core_vgh, facade_point, facade_vg_point, facade_vgh, facade_visit, facade_vg_visit,
+                overhead);
 }
 
 template <int Degree>
@@ -161,12 +161,13 @@ void bench_degree(const std::vector<float>& image) {
 int main() {
     const std::vector<float> image = make_image();
     std::printf("Image %lldx%lld, %zu points, min of %d runs (ns/point)\n\n",
-                static_cast<long long>(kImageSize), static_cast<long long>(kImageSize),
-                kPointCount, kRepetitions);
-    std::puts("| degree | type | core value | core value_and_gradient | core value_gradient_hessian | "
-              "facade value | facade value_and_gradient | facade value_gradient_hessian | "
-              "facade + visit value | "
-              "facade + visit value_and_gradient | visit vs core value |");
+                static_cast<long long>(kImageSize), static_cast<long long>(kImageSize), kPointCount,
+                kRepetitions);
+    std::puts(
+        "| degree | type | core value | core value_and_gradient | core value_gradient_hessian | "
+        "facade value | facade value_and_gradient | facade value_gradient_hessian | "
+        "facade + visit value | "
+        "facade + visit value_and_gradient | visit vs core value |");
     std::puts("|---|---|---|---|---|---|---|---|---|---|---|");
     bench_degree<1>(image);
     bench_degree<3>(image);

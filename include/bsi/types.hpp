@@ -15,10 +15,10 @@ namespace bsi {
 /// @tparam P Pixel type (may be const-qualified).
 template <class P>
 struct ImageView {
-    P* data;                 ///< Pointer to pixel (0, 0).
-    std::ptrdiff_t width;    ///< Number of columns.
-    std::ptrdiff_t height;   ///< Number of rows.
-    std::ptrdiff_t stride;   ///< Distance in elements between two consecutive rows.
+    P* data;                ///< Pointer to pixel (0, 0).
+    std::ptrdiff_t width;   ///< Number of columns.
+    std::ptrdiff_t height;  ///< Number of rows.
+    std::ptrdiff_t stride;  ///< Distance in elements between two consecutive rows.
 
     /// @brief Access a pixel.
     /// @param x Column index, in [0, width).
@@ -45,11 +45,11 @@ struct ImageView {
 /// @tparam T Coefficient type (may be const-qualified).
 template <class T>
 struct CoeffView {
-    T* origin;               ///< Pointer to coefficient (0, 0) inside the padded storage.
-    std::ptrdiff_t width;    ///< Number of coefficients per row (without padding).
-    std::ptrdiff_t height;   ///< Number of coefficient rows (without padding).
-    std::ptrdiff_t stride;   ///< Distance in elements between two consecutive storage rows.
-    std::ptrdiff_t pad;      ///< Padding cells on each side.
+    T* origin;              ///< Pointer to coefficient (0, 0) inside the padded storage.
+    std::ptrdiff_t width;   ///< Number of coefficients per row (without padding).
+    std::ptrdiff_t height;  ///< Number of coefficient rows (without padding).
+    std::ptrdiff_t stride;  ///< Distance in elements between two consecutive storage rows.
+    std::ptrdiff_t pad;     ///< Padding cells on each side.
 
     /// @brief Access a coefficient, padding included.
     /// @param i Column index, in [-pad, width - 1 + pad].
@@ -73,17 +73,17 @@ struct CoeffView {
 /// @tparam T Scalar type.
 template <class T>
 struct Gradient {
-    T dx;   ///< Partial derivative along x.
-    T dy;   ///< Partial derivative along y.
+    T dx;  ///< Partial derivative along x.
+    T dy;  ///< Partial derivative along y.
 };
 
 /// @brief Interpolated value together with its spatial gradient.
 /// @tparam T Scalar type.
 template <class T>
 struct ValueAndGradient {
-    T value;   ///< Interpolated value.
-    T dx;      ///< Partial derivative along x.
-    T dy;      ///< Partial derivative along y.
+    T value;  ///< Interpolated value.
+    T dx;     ///< Partial derivative along x.
+    T dy;     ///< Partial derivative along y.
 };
 
 /// @brief Second partial derivatives (symmetric Hessian) of the interpolated function.

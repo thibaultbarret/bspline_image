@@ -11,8 +11,8 @@
 /// \f$\lambda = \prod_i (1 - z_i)(1 - 1/z_i)\f$. The factor \f$-z_i\f$ comes from the
 /// anti-causal recursion \f$c^-_k = z_i (c^-_{k+1} - c^+_k)\f$, whose transfer function is
 /// \f$-z_i/(1 - z_i z)\f$. The DC gain is \f$H(1) = 1\f$, since each pole contributes
-/// \f$(1-z_i)(1-1/z_i)(-z_i)/(1-z_i)^2 = 1\f$: constants are preserved. Each pole is applied as a causal
-/// first-order recursion followed by an anti-causal one. Boundaries are whole-sample
+/// \f$(1-z_i)(1-1/z_i)(-z_i)/(1-z_i)^2 = 1\f$: constants are preserved. Each pole is applied as a
+/// causal first-order recursion followed by an anti-causal one. Boundaries are whole-sample
 /// symmetric without repeating the edge sample (period \f$2N-2\f$, see
 /// `bsi::mirror_index`). Computation is always done in `double`.
 
@@ -39,10 +39,10 @@ inline constexpr double prefilter_epsilon = 2.220446049250313e-16;
 /// @param step Stride between samples, in elements.
 /// @param z Pole, \f$-1 < z < 0\f$.
 /// @return The causal initial condition \f$c^+_0\f$.
-BSI_HOST_DEVICE inline double initial_causal(const double* c, std::ptrdiff_t n,
-                                             std::ptrdiff_t step, double z) noexcept {
-    const std::ptrdiff_t horizon = static_cast<std::ptrdiff_t>(
-        std::ceil(std::log(prefilter_epsilon) / std::log(std::abs(z))));
+BSI_HOST_DEVICE inline double initial_causal(const double* c, std::ptrdiff_t n, std::ptrdiff_t step,
+                                             double z) noexcept {
+    const std::ptrdiff_t horizon =
+        static_cast<std::ptrdiff_t>(std::ceil(std::log(prefilter_epsilon) / std::log(std::abs(z))));
     if (horizon < n) {
         double zk = z;
         double sum = c[0];
@@ -98,8 +98,7 @@ BSI_HOST_DEVICE void prefilter_line(double* c, std::ptrdiff_t n, std::ptrdiff_t 
             const double z = pole<Degree>(i);
             c[0] = detail::initial_causal(c, n, step, z);
             for (std::ptrdiff_t k = 1; k < n; ++k) c[k * step] += z * c[(k - 1) * step];
-            c[(n - 1) * step] =
-                (z / (z * z - 1.0)) * (z * c[(n - 2) * step] + c[(n - 1) * step]);
+            c[(n - 1) * step] = (z / (z * z - 1.0)) * (z * c[(n - 2) * step] + c[(n - 1) * step]);
             for (std::ptrdiff_t k = n - 2; k >= 0; --k) {
                 c[k * step] = z * (c[(k + 1) * step] - c[k * step]);
             }

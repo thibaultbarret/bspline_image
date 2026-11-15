@@ -15,7 +15,7 @@ const std::vector<double> xs = {-3.7, -1.5, -0.5, 0.0, 0.25, 0.5, 0.999, 1.0, 2.
 
 template <class DegreeTag>
 class Basis : public ::testing::Test {
-   public:
+public:
     static constexpr int D = DegreeTag::value;
 };
 TYPED_TEST_SUITE(Basis, AllDegrees);

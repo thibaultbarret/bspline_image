@@ -31,8 +31,7 @@ struct variant_of_degrees<T, std::index_sequence<Is...>> {
 
 /// @brief Variant of all supported degrees, indexed by degree.
 template <class T>
-using any_impl_t =
-    typename variant_of_degrees<T, std::make_index_sequence<max_degree + 1>>::type;
+using any_impl_t = typename variant_of_degrees<T, std::make_index_sequence<max_degree + 1>>::type;
 
 /// @brief Build alternative `I` of the variant in place.
 template <class T, std::size_t I, class P>
@@ -189,8 +188,8 @@ public:
     /// @param dxx Output second derivatives along x, same size as `xs`.
     /// @param dxy Output mixed second derivatives, same size as `xs`.
     /// @param dyy Output second derivatives along y, same size as `xs`.
-    void hessians(std::span<const T> xs, std::span<const T> ys, std::span<T> dxx,
-                  std::span<T> dxy, std::span<T> dyy) const noexcept {
+    void hessians(std::span<const T> xs, std::span<const T> ys, std::span<T> dxx, std::span<T> dxy,
+                  std::span<T> dyy) const noexcept {
         std::visit([&](const auto& s) noexcept { s.hessians(xs, ys, dxx, dxy, dyy); }, impl_);
     }
 

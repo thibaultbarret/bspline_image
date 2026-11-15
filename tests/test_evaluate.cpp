@@ -42,7 +42,7 @@ struct PaddedCoefficients {
 
 template <class DegreeTag>
 class Evaluate : public ::testing::Test {
-  protected:
+protected:
     static constexpr int D = DegreeTag::value;
 };
 TYPED_TEST_SUITE(Evaluate, AllDegrees);
@@ -171,7 +171,7 @@ TYPED_TEST(Evaluate, HessianMatchesFiniteDifferencesOfGradient) {
         const auto grad = [&](double x, double y) {
             return bsi::evaluate_with_gradient<double, D>(c.view, x, y);
         };
-        const double pts[][2] = {{3.37, 4.21}, {9.71, 7.43}, {15.13, 2.67}, {-1.37, 3.29},
+        const double pts[][2] = {{3.37, 4.21},   {9.71, 7.43},  {15.13, 2.67}, {-1.37, 3.29},
                                  {21.43, 16.71}, {6.29, -2.37}, {5.61, 18.13}};
         for (const auto& pt : pts) {
             const double x = pt[0];
@@ -255,14 +255,14 @@ TYPED_TEST(Evaluate, HessianNonFiniteGivesNaN) {
 
 TYPED_TEST(Evaluate, ConstantAndLinearHaveZeroHessian) {
     constexpr int D = TestFixture::D;
-    PaddedCoefficients<double, D> constant(
-        32, 16, [](std::ptrdiff_t, std::ptrdiff_t) { return 3.0; });
+    PaddedCoefficients<double, D> constant(32, 16,
+                                           [](std::ptrdiff_t, std::ptrdiff_t) { return 3.0; });
     PaddedCoefficients<double, D> linear(
         32, 16, [](std::ptrdiff_t i, std::ptrdiff_t) { return static_cast<double>(i); });
     for (double x = 8.0; x <= 24.0; x += 0.37) {
         for (const auto* c : {&constant.view, &linear.view}) {
-            const auto r = bsi::evaluate_with_hessian<double, D>(
-                bsi::CoeffView<const double>(*c), x, 6.3);
+            const auto r =
+                bsi::evaluate_with_hessian<double, D>(bsi::CoeffView<const double>(*c), x, 6.3);
             EXPECT_NEAR(r.dxx, 0.0, 1e-12) << "x=" << x;
             EXPECT_NEAR(r.dxy, 0.0, 1e-12) << "x=" << x;
             EXPECT_NEAR(r.dyy, 0.0, 1e-12) << "x=" << x;

@@ -69,15 +69,13 @@ int main(int argc, char** argv) {
     try {
         const int degree = argc > 1 ? std::stoi(argv[1]) : 5;
         const std::vector<double> pixels = make_image();
-        const bsi::ImageView<const double> view{pixels.data(), kImageSize, kImageSize,
-                                                kImageSize};
+        const bsi::ImageView<const double> view{pixels.data(), kImageSize, kImageSize, kImageSize};
         const bsi::AnyBSplineImage<double> any(view, degree);
 
         const SubsetResult res = any.visit([](const auto& spline) {
             return ssd_subset(spline, kSubsetCenter, kSubsetCenter, kShiftX, kShiftY);
         });
-        std::printf("degree %d: SSD = %.9g, gradient sum = %.9g\n", degree, res.ssd,
-                    res.grad_sum);
+        std::printf("degree %d: SSD = %.9g, gradient sum = %.9g\n", degree, res.ssd, res.grad_sum);
         return std::isfinite(res.ssd) && std::isfinite(res.grad_sum) ? 0 : 1;
     } catch (const std::exception& e) {
         std::fprintf(stderr, "error: %s\n", e.what());

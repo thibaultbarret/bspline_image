@@ -153,3 +153,16 @@ jobs:
         run: pip install .
       - name: Test
         run: python -m pytest python/tests -q
+
+  format:
+    name: clang-format
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install clang-format
+        run: pip install -r requirements-format.txt
+      - name: Check formatting
+        run: git ls-files '*.hpp' '*.cpp' | xargs clang-format --dry-run --Werror

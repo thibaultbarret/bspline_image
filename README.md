@@ -138,6 +138,17 @@ cmake --preset dev && cmake --build --preset dev && ctest --preset dev
 Each preset builds in `build/<preset>`, so its options can be browsed and edited
 interactively with `ccmake build/dev`.
 
+C++ sources follow `.clang-format`, and CI rejects unformatted files. Use the pinned
+clang-format version so that local results match the check:
+
+```sh
+python3 -m venv build/fmt-venv && build/fmt-venv/bin/pip install -r requirements-format.txt
+git ls-files '*.hpp' '*.cpp' | xargs build/fmt-venv/bin/clang-format -i
+```
+
+To hide the bulk reformatting commit from `git blame`:
+`git config blame.ignoreRevsFile .git-blame-ignore-revs`.
+
 Examples are built by default (`build/examples/synthetic_image`, `build/examples/dic_visit`).
 A Release benchmark is available as `bsi_bench`; see `bench/RESULTS.md`.
 
