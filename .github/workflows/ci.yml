@@ -97,12 +97,16 @@ jobs:
         run: >
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
           -DBSI_WARNINGS_AS_ERRORS=ON -DBSI_TSAN=ON
-      - name: Build
-        run: cmake --build build
+          -DBSI_BUILD_BENCH=OFF
+      # Before the build: gtest_discover_tests runs the test binary at build time.
       - name: Lower ASLR entropy for ThreadSanitizer
         run: sudo sysctl vm.mmap_rnd_bits=28
+      - name: Build
+        run: cmake --build build
       - name: Test (single process)
         run: ./build/tests/bsi_tests
+      - name: Run the parallel DIC example
+        run: ./build/examples/dic_parallel_subsets
 
   coverage:
     name: coverage (gcc-14)

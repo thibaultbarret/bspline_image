@@ -241,5 +241,7 @@ def test_batch_fast_path_matches_generic_path(dtype):
         assert a.dtype == np.dtype(dtype) and a.shape == (50,)
         np.testing.assert_array_equal(a, b)
         np.testing.assert_array_equal(a, c)
-    direct[0][:] = 0.0  # the outputs do not alias each other
-    assert np.all(direct[1] == generic[1])
+    for i, a in enumerate(direct):
+        assert a.flags.owndata  # no output keeps another one alive
+        for b in direct[i + 1 :]:
+            assert not np.shares_memory(a, b)

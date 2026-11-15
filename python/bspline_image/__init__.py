@@ -148,9 +148,8 @@ class BSplineImage:
     def _evaluate(self, method, n_outputs: int, xs, ys):
         """Run a batch method of the extension and return its ``n_outputs`` arrays.
 
-        The outputs are rows of a single allocation, which keeps the work done while the
-        interpreter lock is held (allocation, wrapping) small: this matters when several
-        threads evaluate the same interpolator.
+        Keeping the work done while the interpreter lock is held small matters when several
+        threads evaluate the same interpolator, hence the fast path below.
         """
         if (
             type(xs) is np.ndarray
@@ -166,12 +165,11 @@ class BSplineImage:
             fx, fy, shape = xs, ys, None
         else:
             fx, fy, shape = self._coords(xs, ys)
-        block = np.empty((n_outputs, fx.size), dtype=self._dtype)
-        rows = tuple(block)
-        method(fx, fy, *rows)
+        outputs = tuple(np.empty(fx.size, dtype=self._dtype) for _ in range(n_outputs))
+        method(fx, fy, *outputs)
         if shape is None:
-            return rows
-        return tuple(row.reshape(shape) for row in rows)
+            return outputs
+        return tuple(out.reshape(shape) for out in outputs)
 
     def values(self, xs: npt.ArrayLike, ys: npt.ArrayLike) -> np.ndarray:
         """Interpolated values at (xs = columns, ys = rows).
