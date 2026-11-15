@@ -145,6 +145,34 @@ class BSplineImage:
             xs.shape,
         )
 
+    def _evaluate(self, method, n_outputs: int, xs, ys):
+        """Run a batch method of the extension and return its ``n_outputs`` arrays.
+
+        The outputs are rows of a single allocation, which keeps the work done while the
+        interpreter lock is held (allocation, wrapping) small: this matters when several
+        threads evaluate the same interpolator.
+        """
+        if (
+            type(xs) is np.ndarray
+            and type(ys) is np.ndarray
+            and xs.ndim == 1
+            and xs.dtype == self._dtype
+            and ys.dtype == self._dtype
+            and xs.flags.c_contiguous
+            and ys.flags.c_contiguous
+            and xs.shape == ys.shape
+        ):
+            # Fast path (the usual 1-D batch): no conversion, no reshape.
+            fx, fy, shape = xs, ys, None
+        else:
+            fx, fy, shape = self._coords(xs, ys)
+        block = np.empty((n_outputs, fx.size), dtype=self._dtype)
+        rows = tuple(block)
+        method(fx, fy, *rows)
+        if shape is None:
+            return rows
+        return tuple(row.reshape(shape) for row in rows)
+
     def values(self, xs: npt.ArrayLike, ys: npt.ArrayLike) -> np.ndarray:
         """Interpolated values at (xs = columns, ys = rows).
 
@@ -152,10 +180,8 @@ class BSplineImage:
         an array of that shape and of ``dtype``; 0-d inputs give a 0-d array.
         NaN where a coordinate is non-finite.
         """
-        fx, fy, shape = self._coords(xs, ys)
-        out = np.empty(fx.shape, dtype=self._dtype)
-        self._impl.values(fx, fy, out)
-        return out.reshape(shape)
+        (v,) = self._evaluate(self._impl.values, 1, xs, ys)
+        return v
 
     def gradients(
         self, xs: npt.ArrayLike, ys: npt.ArrayLike
@@ -165,11 +191,7 @@ class BSplineImage:
         ``xs`` and ``ys`` must have identical shapes (no broadcasting); the
         outputs have that shape, and 0-d inputs give 0-d arrays.
         """
-        fx, fy, shape = self._coords(xs, ys)
-        dx = np.empty(fx.shape, dtype=self._dtype)
-        dy = np.empty(fx.shape, dtype=self._dtype)
-        self._impl.gradients(fx, fy, dx, dy)
-        return dx.reshape(shape), dy.reshape(shape)
+        return self._evaluate(self._impl.gradients, 2, xs, ys)
 
     def values_and_gradients(
         self, xs: npt.ArrayLike, ys: npt.ArrayLike
@@ -179,12 +201,7 @@ class BSplineImage:
         ``xs`` and ``ys`` must have identical shapes (no broadcasting); the
         outputs have that shape, and 0-d inputs give 0-d arrays.
         """
-        fx, fy, shape = self._coords(xs, ys)
-        v = np.empty(fx.shape, dtype=self._dtype)
-        dx = np.empty(fx.shape, dtype=self._dtype)
-        dy = np.empty(fx.shape, dtype=self._dtype)
-        self._impl.values_and_gradients(fx, fy, v, dx, dy)
-        return v.reshape(shape), dx.reshape(shape), dy.reshape(shape)
+        return self._evaluate(self._impl.values_and_gradients, 3, xs, ys)
 
     def hessians(
         self, xs: npt.ArrayLike, ys: npt.ArrayLike
@@ -196,12 +213,7 @@ class BSplineImage:
         Degree 3 or more is recommended (5 for Newton-type refinement); degree 1
         has ``dxx = dyy = 0`` and a piecewise constant ``dxy``.
         """
-        fx, fy, shape = self._coords(xs, ys)
-        dxx = np.empty(fx.shape, dtype=self._dtype)
-        dxy = np.empty(fx.shape, dtype=self._dtype)
-        dyy = np.empty(fx.shape, dtype=self._dtype)
-        self._impl.hessians(fx, fy, dxx, dxy, dyy)
-        return dxx.reshape(shape), dxy.reshape(shape), dyy.reshape(shape)
+        return self._evaluate(self._impl.hessians, 3, xs, ys)
 
     def values_gradients_hessians(
         self, xs: npt.ArrayLike, ys: npt.ArrayLike
@@ -213,16 +225,4 @@ class BSplineImage:
         Degree 3 or more is recommended (5 for Newton-type refinement); degree 1
         has ``dxx = dyy = 0`` and a piecewise constant ``dxy``.
         """
-        fx, fy, shape = self._coords(xs, ys)
-        v, dx, dy, dxx, dxy, dyy = (
-            np.empty(fx.shape, dtype=self._dtype) for _ in range(6)
-        )
-        self._impl.values_gradients_hessians(fx, fy, v, dx, dy, dxx, dxy, dyy)
-        return (
-            v.reshape(shape),
-            dx.reshape(shape),
-            dy.reshape(shape),
-            dxx.reshape(shape),
-            dxy.reshape(shape),
-            dyy.reshape(shape),
-        )
+        return self._evaluate(self._impl.values_gradients_hessians, 6, xs, ys)

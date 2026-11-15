@@ -224,3 +224,22 @@ def test_hessian_low_degree(degree):
     else:
         assert dxy != 0.0
         assert bxy[0] == dxy
+
+
+@pytest.mark.parametrize("dtype", [np.float64, np.float32])
+def test_batch_fast_path_matches_generic_path(dtype):
+    s = bsi.BSplineImage(smooth(17, 23), degree=5, dtype=dtype)
+    rng = np.random.default_rng(3)
+    xs = rng.uniform(0, 16, 50).astype(dtype)
+    ys = rng.uniform(0, 22, 50).astype(dtype)
+    direct = s.values_gradients_hessians(xs, ys)
+    generic = s.values_gradients_hessians(xs.tolist(), ys.tolist())
+    strided = s.values_gradients_hessians(
+        np.repeat(xs, 2)[::2], np.repeat(ys, 2)[::2]
+    )
+    for a, b, c in zip(direct, generic, strided):
+        assert a.dtype == np.dtype(dtype) and a.shape == (50,)
+        np.testing.assert_array_equal(a, b)
+        np.testing.assert_array_equal(a, c)
+    direct[0][:] = 0.0  # the outputs do not alias each other
+    assert np.all(direct[1] == generic[1])
