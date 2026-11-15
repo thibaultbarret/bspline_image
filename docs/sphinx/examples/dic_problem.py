@@ -22,8 +22,12 @@ subset_y = _rows.ravel().astype(np.float64)
 reference_values = reference[_rows.ravel(), _cols.ravel()]
 
 
-def translated_spline(u_star, degree):
-    """B-spline of the image G(x) = f(x - u*), i.e. the reference translated by u*."""
+def translated_spline(u_star, degree, gain=1.0, offset=0.0):
+    """B-spline of G(x) = gain * f(x - u*) + offset: the reference translated by u*.
+
+    The default gain and offset leave the grey levels unchanged; other values add a
+    contrast and brightness change that a pure translation model cannot represent.
+    """
     ux, uy = u_star
-    deformed = sample(lambda x, y: _speckle(x - ux, y - uy), SIZE, SIZE)
+    deformed = gain * sample(lambda x, y: _speckle(x - ux, y - uy), SIZE, SIZE) + offset
     return BSplineImage(deformed, degree=degree)
