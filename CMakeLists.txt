@@ -88,4 +88,18 @@ if(BSI_BUILD_DOCS)
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/docs
     COMMENT "Generating API documentation with Doxygen"
     VERBATIM)
+
+  find_program(BSI_SPHINX_BUILD sphinx-build)
+  if(NOT BSI_SPHINX_BUILD)
+    message(FATAL_ERROR
+      "sphinx-build not found: run pip install . -r docs/sphinx/requirements.txt in the active Python environment")
+  endif()
+  add_custom_target(docs
+    COMMAND ${CMAKE_COMMAND} -E env BSI_DOCS_BUILD_DIR=${CMAKE_BINARY_DIR}/docs
+            ${BSI_SPHINX_BUILD} -W --keep-going -b html
+            -d ${CMAKE_BINARY_DIR}/docs/doctrees
+            ${PROJECT_SOURCE_DIR}/docs/sphinx ${CMAKE_BINARY_DIR}/docs/site
+    DEPENDS docs-api
+    COMMENT "Building the Sphinx site"
+    VERBATIM)
 endif()

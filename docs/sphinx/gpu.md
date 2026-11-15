@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: BSD-3-Clause -->
-# Using the kernels on a GPU {#gpu}
+# Using the kernels on a GPU
 
 The library has no GPU code in v1, but layer 0 (`bsi/kernel/`) is written so that the
 mathematics can be reused unchanged in CUDA or HIP kernels. Layer-0 functions operate on
@@ -21,7 +21,7 @@ nothing otherwise.
 
 ## Moving the coefficients
 
-`BSplineImage::coefficients()` returns a `bsi::CoeffView<const T>` with the fields
+{bsi}`bsi::BSplineImage::coefficients`() returns a `bsi::CoeffView<const T>` with the fields
 `origin`, `width`, `height`, `stride` and `pad`. The storage is a padded row-major array of
 `stride * (height + 2 * pad)` elements, and `origin` points at coefficient (0, 0) inside
 it, `pad * stride + pad` elements after the start. To use it on a device:
@@ -38,5 +38,5 @@ so the device code needs no border handling beyond `fold_mirror`, which `evaluat
 ## The prefilter stays on the host
 
 The prefilter (`bsi::prefilter_line`) is a recursion that is sequential along each line.
-In v1 it runs on the host, inside the `bsi::BSplineImage` constructor, always in `double`.
+In v1 it runs on the host, inside the {bsi}`bsi::BSplineImage` constructor, always in `double`.
 Only the evaluation, which is independent per point, is meant for the device.
