@@ -83,6 +83,7 @@ jobs:
   tsan:
     name: thread sanitizer (clang-18 Debug)
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     env:
       CC: clang-18
       CXX: clang++-18
@@ -98,8 +99,10 @@ jobs:
           -DBSI_WARNINGS_AS_ERRORS=ON -DBSI_TSAN=ON
       - name: Build
         run: cmake --build build
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
+      - name: Lower ASLR entropy for ThreadSanitizer
+        run: sudo sysctl vm.mmap_rnd_bits=28
+      - name: Test (single process)
+        run: ./build/tests/bsi_tests
 
   coverage:
     name: coverage (gcc-14)
