@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# clangd reads compile commands from the CMake presets (CMAKE_EXPORT_COMPILE_COMMANDS):
+# configure `dev` (and `python` for the bindings) once with `cmake --preset <name>`.
+CompileFlags:
+  CompilationDatabase: build/dev
+---
+If:
+  PathMatch: python/.*
+CompileFlags:
+  CompilationDatabase: build/python

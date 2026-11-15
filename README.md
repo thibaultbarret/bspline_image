@@ -138,6 +138,10 @@ cmake --preset dev && cmake --build --preset dev && ctest --preset dev
 Each preset builds in `build/<preset>`, so its options can be browsed and edited
 interactively with `ccmake build/dev`.
 
+Presets export `compile_commands.json`, which clangd finds through `.clangd`: configure
+`dev` once (and `python` for the bindings) and any clangd-based editor gets completion and
+diagnostics, GoogleTest and nanobind included.
+
 C++ sources follow `.clang-format`, and CI rejects unformatted files. Use the pinned
 clang-format version so that local results match the check:
 
