@@ -1,0 +1,5 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+/* Widen the content column (theme default: 800px) for figures and wide tables. */
+.wy-nav-content {
+    max-width: 1200px;
+}

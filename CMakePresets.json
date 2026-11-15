@@ -45,7 +45,7 @@
     },
     {
       "name": "docs",
-      "displayName": "Doxygen documentation",
+      "displayName": "Sphinx and Doxygen documentation",
       "inherits": "base",
       "cacheVariables": {
         "BSI_BUILD_DOCS": "ON",

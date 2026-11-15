@@ -1,0 +1,9 @@
+{# SPDX-License-Identifier: BSD-3-Clause #}
+{%- extends "!layout.html" %}
+{%- block menu %}
+  {{ super() }}
+  <p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+  <ul>
+    <li class="toctree-l1"><a class="reference external" href="{{ pathto('api/index.html', 1) }}">API reference</a></li>
+  </ul>
+{%- endblock %}
