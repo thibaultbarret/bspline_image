@@ -15,6 +15,8 @@
 #define BSI_HOST_DEVICE
 #endif
 
+/// @namespace bsi
+/// @brief B-spline image interpolation.
 namespace bsi {
 
 /// @brief Highest supported spline degree.

@@ -12,6 +12,13 @@ BUILD_DIR = Path(os.environ.get("BSI_DOCS_BUILD_DIR", REPO_ROOT / "build" / "doc
 with open(REPO_ROOT / "pyproject.toml", "rb") as pyproject:
     release = tomllib.load(pyproject)["project"]["version"]
 
+for doxygen_output in (BUILD_DIR / "bsi.tag", BUILD_DIR / "extra"):
+    if not doxygen_output.exists():
+        raise RuntimeError(
+            f"Doxygen output not found in {BUILD_DIR}: build the docs-api target first "
+            f"(cmake --build <dir> --target docs-api); missing {doxygen_output}"
+        )
+
 project = "bspline_image"
 copyright = "2026, Thibault BARRET"
 
@@ -24,6 +31,7 @@ extensions = [
 
 myst_enable_extensions = ["dollarmath", "amsmath", "colon_fence"]
 
+templates_path = ["_templates"]
 html_theme = "sphinx_rtd_theme"
 # The Doxygen HTML (built by the docs-api target) is published under api/.
 html_extra_path = [str(BUILD_DIR / "extra")]
