@@ -60,8 +60,8 @@ python3 -m venv .venv && .venv/bin/pip install .
 
 ## Building this documentation
 
-The site is built with Sphinx and the API reference with Doxygen (both must be
-available; Doxygen and Graphviz come from your system package manager). The Python
+The site is built with Sphinx and the API reference with Doxygen (Doxygen
+must be available from your system package manager). The Python
 module must be installed in the same environment, because the pages execute examples
 that import it:
 

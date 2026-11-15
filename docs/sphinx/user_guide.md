@@ -10,8 +10,8 @@
 - **Layer 2** is {bsi}`bsi::AnyBSplineImage`, a facade with a runtime degree and a
   `visit()` escape hatch for hot loops.
 
-The Python class `bspline_image.BSplineImage` wraps layers 1 and 2 behind a single
-runtime-degree interface.
+The Python class `bspline_image.BSplineImage` wraps layer 2
+({bsi}`bsi::AnyBSplineImage`) behind a runtime-degree interface.
 
 ## Degrees and boundaries
 
@@ -118,10 +118,10 @@ DIC.
 ### Cost
 
 The window grows as $(n+1)^2$ coefficients, so cost rises with the degree. See
-`bench/RESULTS.md` for measured numbers: per-point time roughly doubles from degree 3 to
+[`bench/RESULTS.md`](https://github.com/thibaultbarret/bspline_image/blob/main/bench/RESULTS.md) for measured numbers: per-point time roughly doubles from degree 3 to
 degree 5 and rises again towards degree 7, while degree 1 is the cheapest. Prefiltering
 is paid once per image, so it is negligible compared with millions of evaluations. The
-numbers in `bench/RESULTS.md` come from one noisy laptop; treat them qualitatively.
+numbers in [`bench/RESULTS.md`](https://github.com/thibaultbarret/bspline_image/blob/main/bench/RESULTS.md) come from one noisy laptop; treat them qualitatively.
 
 ### The visit pattern
 

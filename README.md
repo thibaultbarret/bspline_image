@@ -106,7 +106,7 @@ For degree n, evaluation reads (n + 1)^2 coefficients.
 
 The documentation (installation, user guide, theory, GPU kernels) is a Sphinx site published
 at <https://thibaultbarret.github.io/bspline_image/>; the Doxygen API reference lives under
-`/api/` at the same address. To build both locally (needs Doxygen and Graphviz):
+`/api/` at the same address. To build both locally (needs Doxygen):
 
 ```sh
 python3 -m venv .venv
