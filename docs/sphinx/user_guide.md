@@ -92,10 +92,39 @@ coefficients are stored in single precision and the coordinates are rounded to `
 too, which limits precision to about $10^{-3}$ px around $x = 4000$. Use `float64` for
 large images.
 
+(user-guide-threads)=
 ## Threads
 
 All evaluation methods are `const`, so one interpolator can be read from several threads
-at once. Parallelise over subsets or points in the caller.
+at once without any lock; this is checked by a test suite that also runs under
+ThreadSanitizer. The library starts no thread itself: parallelise in the caller, over
+**subsets** in DIC, since they are independent.
+
+In Python the computation releases the interpreter lock, so a `ThreadPoolExecutor` sharing one
+`BSplineImage` is enough:
+
+```python
+with ThreadPoolExecutor(max_workers=n_threads) as pool:
+    results = list(pool.map(solve_subset, centres))
+```
+
+Use about as many threads as **physical** cores (`os.cpu_count()` counts hyper-threads, which add
+little to this compute-bound kernel). The speed-up depends on the machine.
+{doc}`examples/dic_parallel_subsets` runs this on a field of subsets and measures it, and its C++
+counterpart uses `std::thread`.
+
+Measured on one machine (Intel Core i9-9880H, 8 cores / 16 threads, macOS, 2026-11-15, 31 x 31
+subsets, degree 5, `double`), the batch evaluation of a subset speeds up by about 6 with 8 threads
+in C++ but only by about 2.5 from Python, and a full Python Newton solver by about 1.5, most
+likely because with subsets this small the GIL is released and re-acquired on every call and the
+NumPy code around the calls holds it (about a quarter of each Newton iteration). The scaling
+improves with the number of points per call (about 4.6 at 8 threads for 101 x 101 points), so give
+each task more work, or use C++, when you need the full speed-up.
+
+The Python module is built with `-O3` (nanobind's `NOMINSIZE` option). For a further gain of
+roughly a quarter in time per subset on the machine used for the measurements, the optional CMake
+option `BSI_NATIVE` (`pip install . -Ccmake.define.BSI_NATIVE=ON` for Python) compiles for the
+host CPU; the resulting binary only runs on compatible CPUs, so it is off by default.
 
 (user-guide-dic)=
 ## Digital image correlation

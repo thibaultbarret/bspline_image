@@ -69,6 +69,19 @@
         "BSI_BUILD_EXAMPLES": "OFF",
         "BSI_BUILD_BENCH": "OFF"
       }
+    },
+    {
+      "name": "tsan",
+      "displayName": "ThreadSanitizer (Debug, tests)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BSI_TSAN": "ON",
+        "BSI_WARNINGS_AS_ERRORS": "ON",
+        "BSI_BUILD_TESTS": "ON",
+        "BSI_BUILD_EXAMPLES": "OFF",
+        "BSI_BUILD_BENCH": "OFF"
+      }
     }
   ],
   "buildPresets": [
@@ -76,7 +89,8 @@
     { "name": "release", "configurePreset": "release" },
     { "name": "python", "configurePreset": "python" },
     { "name": "docs", "configurePreset": "docs", "targets": ["docs"] },
-    { "name": "sanitize", "configurePreset": "sanitize" }
+    { "name": "sanitize", "configurePreset": "sanitize" },
+    { "name": "tsan", "configurePreset": "tsan" }
   ],
   "testPresets": [
     {
@@ -87,6 +101,11 @@
     {
       "name": "sanitize",
       "configurePreset": "sanitize",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "tsan",
+      "configurePreset": "tsan",
       "output": { "outputOnFailure": true }
     }
   ]

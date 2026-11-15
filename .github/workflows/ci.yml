@@ -80,6 +80,34 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+  tsan:
+    name: thread sanitizer (clang-18 Debug)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CC: clang-18
+      CXX: clang++-18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 ninja-build
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          -DBSI_WARNINGS_AS_ERRORS=ON -DBSI_TSAN=ON
+          -DBSI_BUILD_BENCH=OFF
+      # Before the build: gtest_discover_tests runs the test binary at build time.
+      - name: Lower ASLR entropy for ThreadSanitizer
+        run: sudo sysctl vm.mmap_rnd_bits=28
+      - name: Build
+        run: cmake --build build
+      - name: Test (single process)
+        run: ./build/tests/bsi_tests
+      - name: Run the parallel DIC example
+        run: ./build/examples/dic_parallel_subsets
+
   coverage:
     name: coverage (gcc-14)
     runs-on: ubuntu-24.04

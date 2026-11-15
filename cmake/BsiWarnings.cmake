@@ -2,6 +2,8 @@
 # Internal-only warning flags. Never propagated to consumers of bsi::bspline_image.
 
 add_library(bsi_warnings INTERFACE)
+# CPU-specific flag (empty unless BSI_NATIVE=ON); internal targets only.
+target_link_libraries(bsi_warnings INTERFACE bsi_native)
 
 if(MSVC)
   target_compile_options(bsi_warnings INTERFACE /W4 /permissive-)

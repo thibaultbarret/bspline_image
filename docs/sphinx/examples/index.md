@@ -11,4 +11,5 @@ interpolation_accuracy
 synthetic_image
 dic_gauss_newton
 dic_full_newton
+dic_parallel_subsets
 ```
