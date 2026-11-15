@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 cmake_minimum_required(VERSION 3.21)
 
+# Extracted dependency archives (GoogleTest) get the extraction time as timestamp (CMake >= 3.24).
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
 file(REAL_PATH "${CMAKE_CURRENT_SOURCE_DIR}" _bsi_src_dir)
 file(REAL_PATH "${CMAKE_CURRENT_BINARY_DIR}" _bsi_bin_dir)
 if(_bsi_src_dir STREQUAL _bsi_bin_dir)
