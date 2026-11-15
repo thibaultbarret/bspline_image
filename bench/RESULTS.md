@@ -5,8 +5,7 @@
 - Date: 2026-11-13
 - Machine: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz (x86_64, macOS, Darwin 25.6.0)
 - Compiler: Homebrew clang 23.1.2 (`/usr/local/opt/llvm/bin/clang++`), C++20
-- Build: Release (`-O3 -DNDEBUG`), no `-march=native`; strict warnings enabled
-- Compilation options: `CMAKE_BUILD_TYPE=Release` (the `release` preset does the same), i.e. the compiler's Release flags `-O3 -DNDEBUG`; `BSI_NATIVE` was not available and is OFF, so no `-march=native`
+- Build: `CMAKE_BUILD_TYPE=Release` (the `release` preset does the same), i.e. the compiler's Release flags `-O3 -DNDEBUG`; `BSI_NATIVE` was not available and is OFF, so no `-march=native`; strict warnings enabled
 - Workload: 1024x1024 `float` random image, 1,000,000 uniform interior points (fixed `std::mt19937` seed),
   one warm-up pass, minimum of 5 timed passes, `std::chrono::steady_clock`. Results are
   accumulated into a volatile sink. Values are ns/point.
