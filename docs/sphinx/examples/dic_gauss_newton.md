@@ -33,8 +33,7 @@ The next page, {doc}`dic_full_newton`, keeps it. For the DIC workflow in general
 $F$ is a speckle sampled on a 96 x 96 image and $G$ is the same speckle translated by a known
 $\mathbf{u}^*$ and sampled exactly (see {doc}`synthetic_image`). The subset is a 31 x 31 pixel
 square at the centre of the image, far from the borders, so the border effect of the prefilter
-does not matter: {doc}`interpolation_accuracy` shows that a margin of about 9 px is enough at
-degree 5, and in practice the region of interest always keeps a margin.
+does not matter: {doc}`interpolation_accuracy` gives the margin needed per degree, and in practice the region of interest always keeps a margin.
 
 ```{code-cell} ipython3
 import matplotlib.pyplot as plt

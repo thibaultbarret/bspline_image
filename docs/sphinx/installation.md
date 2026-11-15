@@ -60,10 +60,10 @@ python3 -m venv .venv && .venv/bin/pip install .
 
 ## Building this documentation
 
-The site is built with Sphinx and the API reference with Doxygen (Doxygen
-must be available from your system package manager). The Python
-module must be installed in the same environment, because the pages execute examples
-that import it:
+The site is built with Sphinx and the API reference with Doxygen (Doxygen must be
+available from your system package manager). The documentation toolchain needs Python 3.12
+or newer (Sphinx 9.1.1, `tomllib`). The Python module must be installed in the same
+environment, because the pages execute examples that import it:
 
 ```sh
 python3 -m venv .venv
@@ -74,3 +74,12 @@ PATH="$PWD/.venv/bin:$PATH" cmake --build --preset docs --target docs
 
 The site is written to `build/docs/docs/site/index.html`, and the Doxygen API
 reference to `build/docs/docs/extra/api/index.html`.
+
+Local builds cache notebook outputs keyed on the notebook text only. After changing the
+helper modules (`speckle.py`, `dic_problem.py`) or the library, remove the doctrees and
+re-execute everything:
+
+```sh
+rm -rf build/docs/doctrees
+PATH="$PWD/.venv/bin:$PATH" BSI_DOCS_EXECUTION=force cmake --build --preset docs --target docs
+```

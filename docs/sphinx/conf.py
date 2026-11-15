@@ -9,6 +9,9 @@ SOURCE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SOURCE_DIR.parent.parent
 BUILD_DIR = Path(os.environ.get("BSI_DOCS_BUILD_DIR", REPO_ROOT / "build" / "docs"))
 
+# Notebook kernels inherit this: keep bytecode out of the source tree.
+os.environ.setdefault("PYTHONPYCACHEPREFIX", str(BUILD_DIR / "pycache"))
+
 with open(REPO_ROOT / "pyproject.toml", "rb") as pyproject:
     release = tomllib.load(pyproject)["project"]["version"]
 
