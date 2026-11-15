@@ -147,14 +147,16 @@ the imposed translation stays far below $10^{-3}$ px, the bias of the interpolat
 The speed-up depends on the machine, so nothing here asserts on it. As a rule of thumb, use about
 as many threads as **physical** cores: `os.cpu_count()` counts logical cores, and hyper-threads
 share the arithmetic units of their core, so they add little to this compute-bound kernel. Beyond
-that, extra threads only add scheduling cost, as the largest count of the table shows. With few
+that, extra threads only add scheduling cost, and the largest counts of the table show little or no
+gain. With few
 subsets the work is also unevenly shared (the last threads wait for the others), and a thread count
 above the number of subsets brings nothing.
 
 Only the interpolator calls run outside the lock. The NumPy code of `solve_subset` around them
 (building the 2 x 2 Hessian, the small linear solve, the Python loop) holds the lock, and with
 subsets of this size it is a large share of the time, so the Python speed-up stays well below
-what the C++ version reaches on the same machine. The larger the share of the interpolator in
+the number of cores (about 1.5 at 8 threads on the machine described in the
+{ref}`user guide <user-guide-threads>`, against about 6 for the batch evaluation alone in C++). The larger the share of the interpolator in
 the task (bigger subsets, more points per call), the closer the scaling gets to the number of
 cores. With much smaller tasks, hand each worker a block of several subsets instead of one.
 
