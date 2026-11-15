@@ -41,10 +41,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 from IPython.display import Markdown, display
 
-from dic_problem import reference_values, subset_x, subset_y, translated_spline
+from dic_problem import HALF_SIZE, reference_values, subset_x, subset_y, translated_spline
 
 STOP_TOLERANCE = 1e-6  # px, on the norm of the update
 MAX_ITERATIONS = 50
+```
+
+For orientation, here is what such a subset looks like on a real speckle image (a 512 x 512
+photograph, 8-bit grey levels), framed in red with a detail of its pixels. The computations of
+this page keep the analytic speckle, which allows an exact comparison to the imposed
+displacement.
+
+```{code-cell} ipython3
+from reference_image import load_speckle_reference, plot_subset_context
+
+real = load_speckle_reference()
+centre = real.shape[0] // 2
+plot_subset_context(real, (centre, centre), HALF_SIZE)
+plt.show()
 ```
 
 ## Gauss-Newton solver
