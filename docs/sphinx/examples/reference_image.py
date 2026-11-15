@@ -43,3 +43,90 @@ def plot_subset_context(image: np.ndarray, centre: tuple[int, int], half_size: i
         ax.set_ylabel("y (row, px)")
     fig.tight_layout()
     return fig
+
+
+# ---------------------------------------------------------------------------------------
+# A speckled element in uniaxial tension: the image pair of the synthetic-image and the
+# parallel-subsets pages.
+#
+# The element is a unit-size Q4 element, (s, t) in [0, 1]^2, whose four corners are mapped
+# onto a ELEMENT_SIZE x ELEMENT_SIZE square of pixels at the centre of the image. Positions
+# are in pixel units, with the pixel (row, column) centred on integer coordinates (x = column,
+# y = row), so the element spans half a pixel beyond its first and last pixel.
+# ---------------------------------------------------------------------------------------
+IMAGE_SIZE = 512
+ELEMENT_SIZE = 320
+BACKGROUND = 126.0  # grey level of the uniform background
+STRAIN = 0.01  # axial strain along y
+POISSON = 0.3  # transverse strain is -POISSON * STRAIN along x
+SPLINE_DEGREE = 7  # degree of the interpolant that generates the deformed image
+ELEMENT_CENTRE = (IMAGE_SIZE - 1) / 2  # x0 = y0, the fixed centre of the element
+ELEMENT_FIRST = IMAGE_SIZE // 2 - ELEMENT_SIZE // 2  # first pixel of the element in the image
+
+# Natural coordinates (s, t) of the nodes, counter-clockwise from the top-left corner.
+NODES_ST = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
+
+
+def q4_shape_functions(s, t) -> np.ndarray:
+    """Bilinear shape functions of the Q4 element, shape ``(4, *np.shape(s))``."""
+    s, t = np.asarray(s, dtype=np.float64), np.asarray(t, dtype=np.float64)
+    return np.array([(1 - s) * (1 - t), s * (1 - t), s * t, (1 - s) * t])
+
+
+def q4_map(s, t, nodes: np.ndarray):
+    """Position ``(x, y)`` of the natural coordinates ``(s, t)`` for the 4 node positions ``nodes``."""
+    n = q4_shape_functions(s, t)
+    return np.tensordot(nodes[:, 0], n, axes=1), np.tensordot(nodes[:, 1], n, axes=1)
+
+
+def tension_displacement(x, y):
+    """Theoretical displacement ``(u, v)`` of uniaxial tension along y, the centre being fixed."""
+    return -POISSON * STRAIN * (np.asarray(x) - ELEMENT_CENTRE), STRAIN * (np.asarray(y) - ELEMENT_CENTRE)
+
+
+def element_nodes() -> tuple[np.ndarray, np.ndarray]:
+    """Return the ``(4, 2)`` node positions of the element in the reference and deformed images."""
+    half = ELEMENT_SIZE / 2
+    reference = ELEMENT_CENTRE + half * (2 * NODES_ST - 1)
+    u, v = tension_displacement(reference[:, 0], reference[:, 1])
+    return reference, reference + np.stack([u, v], axis=1)
+
+
+def natural_coordinates(x, y, nodes: np.ndarray):
+    """Natural coordinates ``(s, t)`` of the positions ``(x, y)`` in an element with rectangular ``nodes``."""
+    return (x - nodes[0, 0]) / (nodes[1, 0] - nodes[0, 0]), (y - nodes[0, 1]) / (nodes[3, 1] - nodes[0, 1])
+
+
+def make_element_pair(speckle: np.ndarray):
+    """Build the image pair from the full speckle image.
+
+    Return ``(reference, deformed, inside)``: the two images in grey levels and the boolean
+    mask of the pixels of the deformed image that lie inside the deformed element. The
+    reference is the speckle inside the element and ``BACKGROUND`` outside. The deformed
+    image is obtained by interpolating the speckle of the element, with a spline of degree
+    ``SPLINE_DEGREE``, at the antecedent of every pixel of the deformed element; the other
+    pixels stay at ``BACKGROUND``.
+    """
+    from bspline_image import BSplineImage
+
+    last = ELEMENT_FIRST + ELEMENT_SIZE
+    crop = speckle[ELEMENT_FIRST:last, ELEMENT_FIRST:last]
+    reference = np.full((IMAGE_SIZE, IMAGE_SIZE), BACKGROUND)
+    reference[ELEMENT_FIRST:last, ELEMENT_FIRST:last] = crop
+
+    nodes_reference, nodes_deformed = element_nodes()
+    rows, cols = np.mgrid[0:IMAGE_SIZE, 0:IMAGE_SIZE].astype(np.float64)
+    s, t = natural_coordinates(cols, rows, nodes_deformed)
+    inside = (s >= 0) & (s <= 1) & (t >= 0) & (t <= 1)
+    source_x, source_y = q4_map(s[inside], t[inside], nodes_reference)
+
+    deformed = np.full((IMAGE_SIZE, IMAGE_SIZE), BACKGROUND)
+    spline = BSplineImage(crop, degree=SPLINE_DEGREE)
+    deformed[inside] = spline.values(source_x - ELEMENT_FIRST, source_y - ELEMENT_FIRST)
+    return reference, deformed, inside
+
+
+def element_outline(nodes: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Closed polygon ``(xs, ys)`` through the four nodes, for ``ax.plot``."""
+    closed = np.vstack([nodes, nodes[:1]])
+    return closed[:, 0], closed[:, 1]
