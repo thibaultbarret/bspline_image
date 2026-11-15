@@ -258,7 +258,9 @@ assert (columns[0], columns[-1]) == expected_columns, (columns[[0, -1]], expecte
 assert (rows_inside[0], rows_inside[-1]) == expected_rows, (rows_inside[[0, -1]], expected_rows)
 assert inside.sum() == (expected_columns[1] - expected_columns[0] + 1) * (expected_rows[1] - expected_rows[0] + 1)
 assert np.all(real_deformed[~inside] == BACKGROUND)
-assert np.all(real_reference[:ELEMENT_FIRST] == BACKGROUND)
+element_mask = np.zeros(real_reference.shape, dtype=bool)
+element_mask[ELEMENT_FIRST : ELEMENT_FIRST + ELEMENT_SIZE, ELEMENT_FIRST : ELEMENT_FIRST + ELEMENT_SIZE] = True
+assert np.all(real_reference[~element_mask] == BACKGROUND)
 assert 0.10 < saturated < 0.14, saturated
 assert round_trip_rms < 1.0, f"round-trip RMS error {round_trip_rms:.3f} grey levels, expected below 1"
 assert round_trip_max < 6.0, f"round-trip max error {round_trip_max:.3f} grey levels, expected below 6"

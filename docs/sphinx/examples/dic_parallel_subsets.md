@@ -60,9 +60,12 @@ spline = BSplineImage(deformed, degree=DIC_DEGREE)  # shared by all the threads,
 
 offsets = np.arange(-HALF_SIZE, HALF_SIZE + 1)
 offset_x, offset_y = (a.ravel().astype(np.float64) for a in np.meshgrid(offsets, offsets))
-first = ELEMENT_FIRST + ELEMENT_MARGIN + HALF_SIZE
-stop = ELEMENT_FIRST + ELEMENT_SIZE - ELEMENT_MARGIN - HALF_SIZE
-axis_centres = np.arange(first, stop, STEP)
+# Subset centres: the grid is centred in the part of the element left free by the margin.
+lowest = ELEMENT_FIRST + ELEMENT_MARGIN + HALF_SIZE
+highest = ELEMENT_FIRST + ELEMENT_SIZE - 1 - ELEMENT_MARGIN - HALF_SIZE
+n_per_axis = (highest - lowest) // STEP + 1
+first = lowest + ((highest - lowest) - (n_per_axis - 1) * STEP) // 2
+axis_centres = first + STEP * np.arange(n_per_axis)
 centres = [(cx, cy) for cy in axis_centres for cx in axis_centres]
 centre_array = np.array(centres, dtype=np.float64)
 print(f"{len(centres)} subsets of {offset_x.size} pixels")
@@ -91,10 +94,37 @@ plt.show()
 
 `solve_subset` runs the full Newton iteration for one subset and returns the displacement and
 the number of iterations. It only reads `spline` and `reference`, and builds its own arrays,
-which is what makes it safe to call from several threads. The displacement reaches 1.6 px at the
-corners of the element, more than the speckle grains can tolerate for a start from zero, so each
-subset starts from the nearest integer displacement of the theoretical field, as a coarse
-whole-pixel search would provide.
+which is what makes it safe to call from several threads.
+
+Newton's method needs a starting point close enough to the solution. The displacement reaches
+1.6 px at the corners of the element, and a start from zero then diverges, as the speckle grains
+are only about 2 px wide. Each subset therefore starts from an integer-pixel search: the sum of
+squared differences between the reference subset and the deformed image shifted by every whole
+number of pixels from -3 to +3 in each direction (49 shifts, a window wider than the largest
+motion), on the raw pixel arrays. It is done once per subset, before the timings, so that the
+timing table below measures the interpolator and the Newton iterations.
+
+```{code-cell} ipython3
+from numpy.lib.stride_tricks import sliding_window_view
+
+SEARCH_RADIUS = 3  # px, the integer-pixel search window is +/- this around zero
+SUBSET_WIDTH = 2 * HALF_SIZE + 1
+
+
+def integer_pixel_start(center):
+    """Whole-pixel shift (dx, dy) of the subset centred on (cx, cy) that minimises the SSD."""
+    cx, cy = center
+    reach = HALF_SIZE + SEARCH_RADIUS
+    window = deformed[cy - reach : cy + reach + 1, cx - reach : cx + reach + 1]
+    candidates = sliding_window_view(window, (SUBSET_WIDTH, SUBSET_WIDTH))  # (7, 7, 31, 31)
+    subset = reference[cy - HALF_SIZE : cy + HALF_SIZE + 1, cx - HALF_SIZE : cx + HALF_SIZE + 1]
+    ssd = ((candidates - subset) ** 2).sum(axis=(2, 3))
+    row, col = np.unravel_index(np.argmin(ssd), ssd.shape)
+    return np.array([col - SEARCH_RADIUS, row - SEARCH_RADIUS], dtype=np.float64)
+
+
+starts = {center: integer_pixel_start(center) for center in centres}
+```
 
 ```{code-cell} ipython3
 def solve_subset(center):
@@ -102,7 +132,7 @@ def solve_subset(center):
     cx, cy = center
     px, py = cx + offset_x, cy + offset_y
     reference_values = reference[py.astype(int), px.astype(int)]
-    u = np.round(np.array(tension_displacement(cx, cy)))  # whole-pixel starting point
+    u = starts[center]  # integer-pixel search result, read only
     for iteration in range(1, MAX_ITERATIONS + 1):
         g, gx, gy, gxx, gxy, gyy = spline.values_gradients_hessians(px + u[0], py + u[1])
         residual = g - reference_values
@@ -165,10 +195,12 @@ print(f"{len(centres)} subsets, {min(iterations)} to {max(iterations)} Newton it
 
 ## Measured against theoretical field
 
-The measured displacement is compared with the theoretical field at each subset centre, and the
+The measured displacement is compared with the theoretical field at each subset centre (the
+right column shows the signed error on each component), and the
 strains are estimated by a linear regression of the measured field,
-$u \approx a_x + \varepsilon_{xx}\, x + \gamma_{xy}\, y$ and
-$v \approx a_y + \gamma_{yx}\, x + \varepsilon_{yy}\, y$.
+$u \approx a_x + \varepsilon_{xx}\, x + b_x\, y$ and
+$v \approx a_y + b_y\, x + \varepsilon_{yy}\, y$ (the coefficients $b_x$ and $b_y$, the
+cross gradients, should vanish).
 
 ```{code-cell} ipython3
 design = np.column_stack([np.ones(len(centres)), centre_array])
@@ -187,11 +219,14 @@ for row, (name, k) in enumerate((("u_x", 0), ("u_y", 1))):
         im = ax.imshow(data.reshape(grid_shape), extent=extent, cmap="RdBu_r", vmin=-limit, vmax=limit)
         ax.set_title(f"{kind} ${name}$")
         fig.colorbar(im, ax=ax, fraction=0.046, label="px")
-axes[0, 2].axis("off")
-im = axes[1, 2].imshow(errors.reshape(grid_shape), extent=extent, cmap="magma", vmin=0)
-axes[1, 2].set_title("$|\\mathbf{u} - \\mathbf{u}_{theory}|$")
-fig.colorbar(im, ax=axes[1, 2], fraction=0.046, label="px")
-for ax in axes.ravel()[[0, 1, 3, 4, 5]]:
+component_error = displacements - theory
+error_limit = np.abs(component_error).max()
+for row, name in enumerate(("u_x", "u_y")):
+    im = axes[row, 2].imshow(component_error[:, row].reshape(grid_shape), extent=extent, cmap="RdBu_r",
+                             vmin=-error_limit, vmax=error_limit)
+    axes[row, 2].set_title(f"error on ${name}$ (measured - theoretical)")
+    fig.colorbar(im, ax=axes[row, 2], fraction=0.046, label="px")
+for ax in axes.ravel():
     ax.set_xlabel("subset centre x (px)")
     ax.set_ylabel("subset centre y (px)")
 fig.tight_layout()
@@ -202,7 +237,7 @@ plt.show()
 :tags: [remove-cell]
 
 ERROR_THRESHOLD = 3e-2  # px, about twice the measured maximum (see the text)
-STRAIN_TOLERANCE = 1e-4  # about ten times the measured strain error
+STRAIN_TOLERANCE = 1e-4  # a comfortable margin over the measured strain error
 for n, (_, results) in runs.items():
     assert len(results) == len(centres)
     assert np.array_equal(np.array([u for u, _ in results]), displacements), n
@@ -218,16 +253,16 @@ assert max(thread_counts) > len(centres)
 Every thread count gives exactly the same displacements as the sequential run: the subsets are
 independent and each one performs the same arithmetic whatever thread runs it.
 
-A translation-only subset is nevertheless unbiased at its centre for this field. The motion
-inside a subset is the centre displacement plus a linear part, $\mathbf{u}(\mathbf{x}) =
-\mathbf{u}_c + \nabla\mathbf{u}\,(\mathbf{x} - \mathbf{x}_c)$, which is odd about the centre:
-a translation cannot represent it, but because the subset is symmetric the linear part averages
-to zero, and the translation that best matches the subset is $\mathbf{u}_c$. What remains is a
-second-order effect, the unmodelled stretch of the speckle inside the subset (about 0.3 px
-between its centre and its edge along $y$, 1 % of 31 px). It acts as noise on each subset, so
-the error shown above is of the order of $10^{-2}$ px, far above the interpolation bias, but
-it has no systematic sign: the regression on the subsets recovers the strains to about
-$10^{-5}$ (printed above). The hidden checks require the maximum error to stay below $3 \times 10^{-2}$ px, about
+A translation cannot represent the stretch inside a subset: the motion is the displacement
+at the centre plus a linear part, $\mathbf{u}(\mathbf{x}) = \mathbf{u}_c +
+\nabla\mathbf{u}\,(\mathbf{x} - \mathbf{x}_c)$, which reaches about 0.15 px between the centre
+and the edge along $y$ (1 % of 15 px). Because the subset is symmetric, this linear part has no
+net effect on average over speckle patterns; but for a given speckle the texture inside the
+subset is not symmetric, so the best translation differs slightly from the displacement at the
+centre. This difference is proportional to the strain and does not shrink with the subset size:
+it acts as noise of about $10^{-2}$ px with no systematic sign, far above the interpolation
+bias. The regression over the subsets averages it out and recovers the strains to about
+$10^{-5}$ (printed above); a first-order (affine) subset shape function would remove it. The hidden checks require the maximum error to stay below $3 \times 10^{-2}$ px, about
 twice the measured maximum, and the strains to be within $10^{-4}$ of the imposed values, a
 margin for small numerical differences between platforms that still catches a regression.
 
@@ -251,7 +286,8 @@ closer the scaling gets to the number of cores. With much smaller tasks, hand ea
 ## The same in C++
 
 The C++ version distributes the subsets over `std::thread` workers and shares one `const`
-`BSplineImage<double, 5>` between them. It is built and run with the other examples.
+`BSplineImage<double, 5>` between them. It uses an analytic speckle under a uniform translation,
+not the element above, and is built and run with the other examples.
 
 ```{literalinclude} ../../../examples/dic_parallel_subsets.cpp
 :language: cpp
