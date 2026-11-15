@@ -75,9 +75,6 @@ def minimise(spline, u0, hessian, tolerance=STOP_TOLERANCE):
             break
     return np.array(iterates), np.array(update_norms)
 
-
-gn_iterates, gn_norms = minimise(spline, START, gauss_newton_hessian)
-newton_iterates, newton_norms = minimise(spline, START, newton_hessian)
 ```
 
 ## Case 1: pure translation
@@ -110,23 +107,25 @@ for iterates, norms in case1:
     assert np.linalg.norm(iterates[-1] - U_STAR) < 1e-3, iterates[-1]
 ```
 
-Both methods converge in a handful of iterations. The residual $r$ vanishes at the solution
-here, since the deformed image is exactly a translated copy of the reference (up to the
-interpolation error): the term $2 \sum r\, \nabla^2 G_s$ that Gauss-Newton drops is then
-negligible near the solution, so Gauss-Newton is itself nearly quadratic and the full Hessian
-brings nothing.
+Both methods converge in a handful of iterations, and Newton takes one more than Gauss-Newton
+here (4 against 3) because far from the solution the term $r\, \nabla^2 G_s$ is not small and
+the first Newton steps are not better. Near the solution the residual $r$ vanishes, since the
+deformed image is exactly a translated copy of the reference (up to the interpolation error):
+the term $2 \sum r\, \nabla^2 G_s$ that Gauss-Newton drops is then negligible, so
+Gauss-Newton is itself nearly quadratic and the full Hessian brings nothing.
 
 ## Case 2: a residual that does not vanish
 
 Real images rarely match the model exactly. Here the deformed image has, in addition to the
 translation, a contrast and brightness change that the translation model cannot represent:
-$G = 0.8\, f(\mathbf{x} - \mathbf{u}^*) + 0.1$. The residual no longer vanishes at the
+$G = 0.8\, f(\mathbf{x} - \mathbf{u}^*) + 0.1$ (gain 0.8, offset 0.1). The residual no longer vanishes at the
 minimiser, so the dropped term matters. The stopping tolerance is lowered to $10^{-10}$ px to
 show the convergence rate.
 
 ```{code-cell} ipython3
 TIGHT_TOLERANCE = 1e-10
-altered_spline = translated_spline(U_STAR, degree=5, gain=0.8, offset=0.1)
+GAIN, OFFSET = 0.8, 0.1
+altered_spline = translated_spline(U_STAR, degree=5, gain=GAIN, offset=OFFSET)
 
 case2 = (
     minimise(altered_spline, START, gauss_newton_hessian, TIGHT_TOLERANCE),
@@ -148,9 +147,11 @@ assert gn2_norms[-1] < TIGHT_TOLERANCE and newton2_norms[-1] < TIGHT_TOLERANCE
 # square of the previous one (checked from the second step on, above round-off).
 for previous, following in zip(newton2_norms[1:-1], newton2_norms[2:]):
     assert following <= 20.0 * previous**2, newton2_norms
-# Linear convergence of Gauss-Newton: successive updates keep a constant ratio.
+# Linear convergence of Gauss-Newton: successive updates keep a constant ratio, close to
+# (1 - gain) / gain, the size of the dropped term relative to J^T J for a contrast change.
 tail_ratios = gn2_norms[-5:][1:] / gn2_norms[-5:][:-1]
-assert np.all((tail_ratios > 0.1) & (tail_ratios < 0.5)), tail_ratios
+expected_ratio = (1.0 - GAIN) / GAIN
+assert np.all(np.abs(tail_ratios / expected_ratio - 1.0) < 0.3), (tail_ratios, expected_ratio)
 assert len(newton2_norms) <= len(gn2_norms)
 ```
 
@@ -158,10 +159,20 @@ assert len(newton2_norms) <= len(gn2_norms)
 
 Both methods converge to the same point, which is the minimiser of the criterion; it is
 slightly off $\mathbf{u}^*$ because the unmodelled contrast change biases the translation. The
-difference is in the convergence rate. Gauss-Newton converges linearly: each update is
-about a quarter of the previous one, and it needs several times more iterations to reach
-$10^{-10}$ px. Newton converges quadratically (the number of correct digits roughly doubles at
-each step) and gets there in a few iterations. This is the practical case for the full Newton
-method: illumination changes, image noise, or shape functions that cannot represent the true
-motion all leave a residual at the solution. `values_gradients_hessians` returns the exact
-second-derivative term for the whole subset in one pass.
+difference is in the convergence rate. Gauss-Newton converges linearly, and the ratio of
+successive updates (about 1/4 here) reflects the size of the dropped term relative to
+$J^{\mathsf T} J$: for a contrast change the residual is about $(1 - g) f$ against a gradient of
+$g \nabla f$, hence a ratio close to $(1 - g)/g = 0.25$ for a gain $g = 0.8$. Newton converges
+quadratically (the number of correct digits roughly doubles at each step).
+
+Full Newton pays off when the model leaves a residual correlated with the image curvature,
+as with an unmodelled contrast change or shape functions that cannot represent the true motion.
+Image noise, by contrast, gives a residual that is uncorrelated with $\nabla^2 G_s$ and hardly
+changes the Gauss-Newton rate, and illumination changes are usually handled by a normalised
+criterion or by gain and offset parameters. The trade-off is honest: Newton needs fewer
+iterations, but evaluates second derivatives at each one (about 1.5 times the cost of
+`values_and_gradients` per point at degree 5, see
+[`bench/RESULTS.md`](https://github.com/thibaultbarret/bspline_image/blob/main/bench/RESULTS.md)),
+and at the tolerances typical of DIC (around $10^{-3}$ px) Gauss-Newton needs only a few more
+iterations. `values_gradients_hessians` returns the exact second-derivative term for the whole
+subset in one pass.

@@ -52,11 +52,12 @@ MAX_ITERATIONS = 50
 Each iteration evaluates $G_s$ and its gradient at the subset points shifted by the current
 $\mathbf{u}$ in one batch call, then solves the $2 \times 2$ system
 $J^{\mathsf T} J \, \Delta\mathbf{u} = -J^{\mathsf T} r$, where the rows of $J$ are the
-gradients $\nabla G_s$ (the factor 2 cancels). The iterates are returned.
+gradients $\nabla G_s$ (the factor 2 cancels). The iterates, the norms of the updates and a
+flag telling whether the stopping rule was met are returned.
 
 ```{code-cell} ipython3
 def gauss_newton(spline, u0):
-    """Minimise C by Gauss-Newton; return the iterates and the norms of the updates."""
+    """Minimise C by Gauss-Newton; return (iterates, update norms, converged)."""
     u = np.asarray(u0, dtype=np.float64)
     iterates, update_norms = [u], []
     for _ in range(MAX_ITERATIONS):
@@ -69,21 +70,21 @@ def gauss_newton(spline, u0):
         update_norms.append(np.linalg.norm(step))
         if update_norms[-1] < STOP_TOLERANCE:
             break
-    return np.array(iterates), np.array(update_norms)
+    return np.array(iterates), np.array(update_norms), update_norms[-1] < STOP_TOLERANCE
 ```
 
 Starting from $\mathbf{u} = 0$ with an imposed $\mathbf{u}^* = (0.4, 0.3)$ px and a degree-5 spline:
 
 ```{code-cell} ipython3
 spline = translated_spline((0.4, 0.3), degree=5)
-iterates, update_norms = gauss_newton(spline, (0.0, 0.0))
+iterates, update_norms, converged = gauss_newton(spline, (0.0, 0.0))
 print(f"converged in {len(update_norms)} iterations, u = {iterates[-1]} (imposed: [0.4 0.3])")
 ```
 
 ```{code-cell} ipython3
 :tags: [remove-cell]
 
-assert update_norms[-1] < STOP_TOLERANCE, update_norms
+assert converged, update_norms
 assert np.allclose(iterates[-1], (0.4, 0.3), atol=1e-3), iterates[-1]
 ```
 
@@ -95,22 +96,30 @@ sub-pixel bias is a classical result {cite}`thevenaz2000interpolation`. The swee
 $u^*_x$ from 0 to 1 px by steps of 0.05, with $u^*_y = 0.3$, and plots the error
 $u_x - u^*_x$ of the Gauss-Newton estimate for several degrees.
 
+With linear interpolation (degree 1) the criterion is not differentiable at integer
+displacements, where the bilinear interpolant has a kink: Gauss-Newton then oscillates between
+two iterates around the minimum instead of converging. Those points, which never meet the
+stopping rule, are drawn as crosses and left out of the table; every other point converged.
+
 ```{code-cell} ipython3
 DEGREES = (1, 3, 5, 7)
 imposed_x = np.linspace(0.0, 1.0, 21)
 UY_STAR = 0.3
 
-bias = {}
+bias, converged_points = {}, {}
 for degree in DEGREES:
-    errors = []
+    errors, flags = [], []
     for ux_star in imposed_x:
-        estimate, _ = gauss_newton(translated_spline((ux_star, UY_STAR), degree), (0.0, 0.0))
+        estimate, _, converged = gauss_newton(translated_spline((ux_star, UY_STAR), degree), (0.0, 0.0))
         errors.append(estimate[-1][0] - ux_star)
-    bias[degree] = np.array(errors)
+        flags.append(converged)
+    bias[degree], converged_points[degree] = np.array(errors), np.array(flags)
 
 fig, ax = plt.subplots(figsize=(6.5, 4))
 for degree in DEGREES:
-    ax.plot(imposed_x, bias[degree], marker="o", markersize=3, label=f"degree {degree}")
+    ok = converged_points[degree]
+    (line,) = ax.plot(imposed_x[ok], bias[degree][ok], marker="o", markersize=3, label=f"degree {degree}")
+    ax.plot(imposed_x[~ok], bias[degree][~ok], "x", color=line.get_color(), markersize=7)
 ax.axhline(0.0, color="black", linewidth=0.5)
 ax.set_xlabel("imposed displacement $u^*_x$ (px)")
 ax.set_ylabel("error $u_x - u^*_x$ (px)")
@@ -119,15 +128,21 @@ ax.legend()
 fig.tight_layout()
 plt.show()
 
+max_bias = {d: np.abs(bias[d][converged_points[d]]).max() for d in DEGREES}
 table = ["| Degree | Max. abs. bias (px) |", "|---|---|"]
-table += [f"| {d} | {np.abs(bias[d]).max():.2e} |" for d in DEGREES]
+table += [f"| {d} | {max_bias[d]:.2e} |" for d in DEGREES]
 display(Markdown("\n".join(table)))
 ```
 
 ```{code-cell} ipython3
 :tags: [remove-cell]
 
-maxima = [np.abs(bias[d]).max() for d in DEGREES]
+# Only degree 1 at integer displacements may fail to converge.
+for degree in DEGREES:
+    failed = imposed_x[~converged_points[degree]]
+    assert degree == 1 or failed.size == 0, (degree, failed)
+    assert np.allclose(failed, np.round(failed)), failed
+maxima = [max_bias[d] for d in DEGREES]
 assert maxima[2] < maxima[0], f"degree 5 bias {maxima[2]:.2e} should be below degree 1 bias {maxima[0]:.2e}"
 assert all(a > b for a, b in zip(maxima, maxima[1:])), maxima
 ```
