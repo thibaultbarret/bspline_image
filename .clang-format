@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Formatting is checked in CI with the clang-format version pinned in requirements-format.txt.
+---
+Language: Cpp
+BasedOnStyle: Google
+Standard: c++20
+IndentWidth: 4
+ColumnLimit: 100
+AccessModifierOffset: -4
+DerivePointerAlignment: false
+PointerAlignment: Left
+IncludeBlocks: Preserve
+...
