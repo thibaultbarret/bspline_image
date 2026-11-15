@@ -104,13 +104,19 @@ For degree n, evaluation reads (n + 1)^2 coefficients.
 
 ## Documentation
 
-API reference and guides (theory, DIC usage, GPU kernels) are built with Doxygen and
-published at <https://thibaultbarret.github.io/bspline_image/>. To build them locally:
+The documentation (installation, user guide, theory, GPU kernels) is a Sphinx site published
+at <https://thibaultbarret.github.io/bspline_image/>; the Doxygen API reference lives under
+`/api/` at the same address. To build both locally (needs Doxygen and Graphviz):
 
 ```sh
-cmake -S . -B build -G Ninja -DBSI_BUILD_DOCS=ON
-cmake --build build --target docs
+python3 -m venv .venv
+.venv/bin/pip install . -r docs/sphinx/requirements.txt
+PATH="$PWD/.venv/bin:$PATH" cmake --preset docs
+PATH="$PWD/.venv/bin:$PATH" cmake --build --preset docs --target docs
 ```
+
+The site is written to `build/docs/docs/site/`. Code examples in the pages are executed
+at build time.
 
 ## Build and test
 

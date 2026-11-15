@@ -21,6 +21,8 @@ coordinate (x = i, y = j).
 :maxdepth: 2
 :caption: Contents
 
+installation
+user_guide
 theory
 gpu
 ```
